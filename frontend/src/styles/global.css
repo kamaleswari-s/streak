@@ -1,0 +1,179 @@
+@import '@fontsource/pixelify-sans';
+@import '@fontsource/plus-jakarta-sans';
+@import '@fontsource/pacifico';
+
+:root {
+  /* Berry Dreams — default theme */
+  --bg: #FEF0F4;
+  --surface: #ffffff;
+  --surface-2: #E5F4F4;
+  --primary: #BF1E62;
+  --primary-light: #F8B6BF;
+  --accent: #95D5D1;
+  --accent-dark: #0a7a74;
+  --text-primary: #3D0E20;
+  --text-secondary: #6B1A3A;
+  --text-muted: #BF1E62;
+  --border: rgba(191, 30, 98, 0.12);
+
+  /* Fonts */
+  --font-pixel: 'Pixelify Sans', monospace;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-logo: 'Pacifico', cursive;
+
+  /* Spacing */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+}
+
+/* Pacific Coast theme */
+[data-theme="pacific_coast"] {
+  --bg: #051C36;
+  --surface: #0d2b4a;
+  --surface-2: #34617F;
+  --primary: #5F8FA5;
+  --primary-light: #34617F;
+  --accent: #E6D3AB;
+  --accent-dark: #c4a87a;
+  --text-primary: #ffffff;
+  --text-secondary: #E6D3AB;
+  --text-muted: #5F8FA5;
+  --border: rgba(95, 143, 165, 0.2);
+}
+
+/* Majorelle theme */
+[data-theme="majorelle"] {
+  --bg: #E8EDDF;
+  --surface: #ffffff;
+  --surface-2: #CFDBD5;
+  --primary: #6060D2;
+  --primary-light: #a0a0e8;
+  --accent: #FF7247;
+  --accent-dark: #cc4a22;
+  --text-primary: #1a1a4a;
+  --text-secondary: #3a3a7a;
+  --text-muted: #6060D2;
+  --border: rgba(96, 96, 210, 0.15);
+}
+
+/* Olive Garden theme */
+[data-theme="olive_garden"] {
+  --bg: #CDE9FF;
+  --surface: #ffffff;
+  --surface-2: #FFB8E5;
+  --primary: #463500;
+  --primary-light: #828600;
+  --accent: #C6A100;
+  --accent-dark: #463500;
+  --text-primary: #2a1f00;
+  --text-secondary: #463500;
+  --text-muted: #828600;
+  --border: rgba(70, 53, 0, 0.15);
+}
+
+/* Cerise Spark theme */
+[data-theme="cerise_spark"] {
+  --bg: #F2F2F1;
+  --surface: #ffffff;
+  --surface-2: #F04D8E;
+  --primary: #E30163;
+  --primary-light: #F04D8E;
+  --accent: #CDDC39;
+  --accent-dark: #9b013f;
+  --text-primary: #1a0010;
+  --text-secondary: #9B013F;
+  --text-muted: #E30163;
+  --border: rgba(227, 1, 99, 0.15);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-pixel);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+p, span, label, input, button {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 24px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 12px 24px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  background: var(--primary);
+  color: white;
+}
+
+input, textarea {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text-primary);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+input:focus, textarea:focus {
+  border-color: var(--primary);
+}
+
+input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
