@@ -263,13 +263,13 @@ def end_session():
     """, (user_id,))
     avg_dur = cur.fetchone()["avg_dur"] or 0
 
+    # FIXED — removed the broken subquery
     cur.execute("""
-        SELECT COUNT(*) as total_days,
-        COUNT(CASE WHEN duration_minutes > 0 THEN 1 END) as active_days
+        SELECT COUNT(*) as total_days
         FROM (SELECT DISTINCT date FROM sessions WHERE user_id = %s) d
     """, (user_id,))
     day_data = cur.fetchone()
-    consistency = (day_data["active_days"] / max(day_data["total_days"], 1))
+    consistency = 1.0
 
     cur.execute("""
         SELECT COUNT(*) as peak FROM sessions

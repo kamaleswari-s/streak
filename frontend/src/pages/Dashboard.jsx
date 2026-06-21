@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import io from 'socket.io-client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import Navbar from '../components/layout/Navbar'
 
 const API = 'http://localhost:5000'
 
@@ -16,24 +16,16 @@ function StatCard({ label, value, sub, accent }) {
       style={{ padding: '1.5rem', textAlign: 'center' }}
     >
       <div style={{
-        fontSize: '12px',
-        fontWeight: '600',
+        fontSize: '12px', fontWeight: '600',
         color: accent ? 'var(--accent-dark)' : 'var(--text-secondary)',
-        letterSpacing: '2px',
-        marginBottom: '8px',
-        opacity: 0.7
+        letterSpacing: '2px', marginBottom: '8px', opacity: 0.7
       }}>{label}</div>
       <div style={{
-        fontFamily: 'var(--font-pixel)',
-        fontSize: '42px',
-        color: accent ? 'var(--accent-dark)' : 'var(--primary)',
-        lineHeight: 1
+        fontFamily: 'var(--font-pixel)', fontSize: '42px',
+        color: accent ? 'var(--accent-dark)' : 'var(--primary)', lineHeight: 1
       }}>{value}</div>
       {sub && <div style={{
-        fontSize: '13px',
-        color: 'var(--text-secondary)',
-        marginTop: '6px',
-        opacity: 0.6
+        fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px', opacity: 0.6
       }}>{sub}</div>}
     </motion.div>
   )
@@ -48,29 +40,15 @@ function LEDDevice({ score, sessionActive }) {
     if (score < 80) return { color: '#7F77DD', glow: '#7F77DD', label: 'deep purple', desc: 'full flow state' }
     return { color: '#639922', glow: '#639922', label: 'pulse green', desc: 'milestone hit' }
   }
-
   const led = getLEDColor()
 
   return (
-    <motion.div
-      className="glass"
-      style={{ padding: '2rem', textAlign: 'center' }}
-    >
-      <div style={{
-        fontSize: '12px',
-        fontWeight: '600',
-        color: 'var(--text-secondary)',
-        letterSpacing: '2px',
-        marginBottom: '1.5rem',
-        opacity: 0.7
-      }}>DEVICE STATE</div>
-
-      <motion.svg
-        width="120" height="120" viewBox="0 0 100 100"
+    <motion.div className="glass" style={{ padding: '2rem', textAlign: 'center' }}>
+      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>DEVICE STATE</div>
+      <motion.svg width="120" height="120" viewBox="0 0 100 100"
         animate={{ y: [0, -4, 0] }}
         transition={{ duration: 3, repeat: Infinity }}
-        style={{ display: 'block', margin: '0 auto 1rem' }}
-      >
+        style={{ display: 'block', margin: '0 auto 1rem' }}>
         <motion.circle cx="50" cy="8" r="2.5"
           animate={{ opacity: sessionActive ? [0.3, 1, 0.3] : 0.2, fill: led.color }}
           transition={{ duration: 2, repeat: Infinity }} />
@@ -95,23 +73,12 @@ function LEDDevice({ score, sessionActive }) {
           animate={{
             fill: led.color,
             r: sessionActive ? [6, 9, 6] : 6,
-            filter: sessionActive ? [`drop-shadow(0 0 4px ${led.glow})`, `drop-shadow(0 0 10px ${led.glow})`, `drop-shadow(0 0 4px ${led.glow})`] : 'none'
           }}
           transition={{ duration: 1.8, repeat: Infinity }} />
         <circle cx="50" cy="38" r="3" fill="white" />
       </motion.svg>
-
-      <div style={{
-        fontFamily: 'var(--font-pixel)',
-        fontSize: '18px',
-        color: 'var(--primary)',
-        marginBottom: '4px'
-      }}>{led.label}</div>
-      <div style={{
-        fontSize: '13px',
-        color: 'var(--text-secondary)',
-        opacity: 0.7
-      }}>{led.desc}</div>
+      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'var(--primary)', marginBottom: '4px' }}>{led.label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', opacity: 0.7 }}>{led.desc}</div>
     </motion.div>
   )
 }
@@ -122,64 +89,25 @@ function AuraRing({ score }) {
   const progress = (score / 100) * circumference
 
   return (
-    <motion.div
-      className="glass"
-      style={{ padding: '2rem', textAlign: 'center' }}
-    >
-      <div style={{
-        fontSize: '12px',
-        fontWeight: '600',
-        color: 'var(--text-secondary)',
-        letterSpacing: '2px',
-        marginBottom: '1.5rem',
-        opacity: 0.7
-      }}>AURA SCORE</div>
-
+    <motion.div className="glass" style={{ padding: '2rem', textAlign: 'center' }}>
+      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>AURA SCORE</div>
       <div style={{ position: 'relative', display: 'inline-block' }}>
         <svg width="140" height="140" viewBox="0 0 140 140">
-          <circle cx="70" cy="70" r={radius}
-            fill="none"
-            stroke="var(--border)"
-            strokeWidth="10" />
-          <motion.circle
-            cx="70" cy="70" r={radius}
-            fill="none"
-            stroke="var(--primary)"
-            strokeWidth="10"
-            strokeLinecap="round"
+          <circle cx="70" cy="70" r={radius} fill="none" stroke="var(--border)" strokeWidth="10" />
+          <motion.circle cx="70" cy="70" r={radius} fill="none"
+            stroke="var(--primary)" strokeWidth="10" strokeLinecap="round"
             strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: circumference - progress }}
             transition={{ duration: 1.5, ease: 'easeOut' }}
-            style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px' }}
-          />
+            style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px' }} />
         </svg>
-        <div style={{
-          position: 'absolute',
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            fontFamily: 'var(--font-pixel)',
-            fontSize: '32px',
-            color: 'var(--primary)',
-            lineHeight: 1
-          }}>{Math.round(score)}</div>
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-secondary)',
-            opacity: 0.6
-          }}>/ 100</div>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '32px', color: 'var(--primary)', lineHeight: 1 }}>{Math.round(score)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.6 }}>/ 100</div>
         </div>
       </div>
-
-      <div style={{
-        fontSize: '13px',
-        color: 'var(--text-secondary)',
-        marginTop: '1rem',
-        opacity: 0.7
-      }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '1rem', opacity: 0.7 }}>
         {score < 30 && 'keep going, aura is building'}
         {score >= 30 && score < 60 && 'solid momentum, stay consistent'}
         {score >= 60 && score < 80 && 'strong aura, you are on a roll'}
@@ -196,70 +124,35 @@ function StreakCalendar({ dates }) {
     const d = new Date(today)
     d.setDate(today.getDate() - i)
     const iso = d.toISOString().split('T')[0]
-    const isToday = i === 0
-    const hasSession = dates.includes(iso)
-    days.push({ iso, isToday, hasSession })
+    days.push({ iso, isToday: i === 0, hasSession: dates.includes(iso) })
   }
 
   return (
-    <motion.div
-      className="glass"
-      style={{ padding: '1.5rem' }}
-    >
-      <div style={{
-        fontSize: '12px',
-        fontWeight: '600',
-        color: 'var(--text-secondary)',
-        letterSpacing: '2px',
-        marginBottom: '1rem',
-        opacity: 0.7
-      }}>28-DAY STREAK CALENDAR</div>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(7, 1fr)',
-        gap: '6px'
-      }}>
+    <motion.div className="glass" style={{ padding: '1.5rem' }}>
+      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1rem', opacity: 0.7 }}>28-DAY STREAK CALENDAR</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
         {days.map((day, i) => (
-          <motion.div
-            key={day.iso}
+          <motion.div key={day.iso}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.02 }}
             title={day.iso}
             style={{
-              aspectRatio: '1',
-              borderRadius: '6px',
-              background: day.isToday
-                ? 'var(--primary)'
-                : day.hasSession
-                  ? 'var(--primary-light)'
-                  : 'rgba(191,30,98,0.08)',
-              border: day.isToday ? '2px solid var(--primary)' : 'none',
-              cursor: 'default'
-            }}
-          />
+              aspectRatio: '1', borderRadius: '6px',
+              background: day.isToday ? 'var(--primary)' : day.hasSession ? 'var(--primary-light)' : 'rgba(191,30,98,0.08)',
+              border: day.isToday ? '2px solid var(--primary)' : 'none'
+            }} />
         ))}
       </div>
-
-      <div style={{
-        display: 'flex',
-        gap: '16px',
-        marginTop: '1rem',
-        fontSize: '12px',
-        color: 'var(--text-secondary)'
-      }}>
+      <div style={{ display: 'flex', gap: '16px', marginTop: '1rem', fontSize: '12px', color: 'var(--text-secondary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'rgba(191,30,98,0.08)' }} />
-          no session
+          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'rgba(191,30,98,0.08)' }} /> no session
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--primary-light)' }} />
-          studied
+          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--primary-light)' }} /> studied
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--primary)' }} />
-          today
+          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--primary)' }} /> today
         </div>
       </div>
     </motion.div>
@@ -268,7 +161,6 @@ function StreakCalendar({ dates }) {
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
-  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [sessionActive, setSessionActive] = useState(false)
   const [sessionStart, setSessionStart] = useState(null)
@@ -297,7 +189,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboard()
-
     socketRef.current = io(API)
     socketRef.current.on(`session_started_${user?.user_id}`, (d) => {
       setSessionActive(true)
@@ -311,7 +202,6 @@ export default function Dashboard() {
       setElapsed(0)
       fetchDashboard()
     })
-
     return () => socketRef.current?.disconnect()
   }, [])
 
@@ -333,22 +223,6 @@ export default function Dashboard() {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
-  const startSession = async () => {
-    try {
-      await axios.post(`${API}/session/start`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-    } catch (err) { console.error(err) }
-  }
-
-  const endSession = async () => {
-    try {
-      await axios.post(`${API}/session/end`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-    } catch (err) { console.error(err) }
-  }
-
   const formatMins = (mins) => {
     if (!mins) return '0m'
     const h = Math.floor(mins / 60)
@@ -357,20 +231,45 @@ export default function Dashboard() {
     return m === 0 ? `${h}h` : `${h}h ${m}m`
   }
 
+  // ── INSTANT session buttons ──────────────────────────────
+  const startSession = async () => {
+    if (sessionActive) return
+    const now = new Date()
+    setSessionActive(true)
+    setSessionStart(now)
+    setElapsed(0)
+    try {
+      await axios.post(`${API}/session/start`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch (err) {
+      setSessionActive(false)
+      setSessionStart(null)
+      console.error(err)
+    }
+  }
+
+  const endSession = async () => {
+    if (!sessionActive) return
+    setSessionActive(false)
+    setSessionStart(null)
+    setElapsed(0)
+    try {
+      await axios.post(`${API}/session/end`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      fetchDashboard()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   if (loading) return (
-    <div style={{
-      height: '100vh', display: 'flex',
-      alignItems: 'center', justifyContent: 'center',
-      background: 'var(--bg)'
-    }}>
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
       <motion.div
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ duration: 1.5, repeat: Infinity }}
-        style={{
-          fontFamily: 'var(--font-pixel)',
-          fontSize: '24px',
-          color: 'var(--primary)'
-        }}>
+        style={{ fontFamily: 'var(--font-pixel)', fontSize: '24px', color: 'var(--primary)' }}>
         loading strëak...
       </motion.div>
     </div>
@@ -378,324 +277,102 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-
-      {/* NAV */}
-      <nav style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '1.2rem 2.5rem',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        background: 'rgba(254,240,244,0.85)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid var(--border)'
-      }}>
-        <div style={{
-          fontFamily: 'var(--font-logo)',
-          fontSize: '28px',
-          color: 'var(--primary)'
-        }}>strëak</div>
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {[
-            { label: 'dashboard', path: '/dashboard' },
-            { label: 'history', path: '/history' },
-            { label: 'analytics', path: '/analytics' },
-            { label: 'leaderboard', path: '/leaderboard' },
-            { label: 'device', path: '/device' },
-            { label: 'settings', path: '/settings' },
-          ].map(item => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: 'var(--text-secondary)',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontFamily: 'var(--font-body)',
-                fontWeight: '500'
-              }}>
-              {item.label}
-            </button>
-          ))}
-          <button
-            onClick={logout}
-            style={{
-              background: 'none',
-              border: '1.5px solid var(--border)',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: 'var(--text-secondary)',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontFamily: 'var(--font-body)'
-            }}>
-            log out
-          </button>
-        </div>
-      </nav>
+      <Navbar />
 
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
-
-        {/* greeting */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ marginBottom: '2rem' }}
-        >
-          <h1 style={{
-            fontFamily: 'var(--font-pixel)',
-            fontSize: 'clamp(24px, 4vw, 36px)',
-            color: 'var(--primary)',
-            marginBottom: '6px'
-          }}>
-            {new Date().getHours() < 12 ? 'good morning' :
-             new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 36px)', color: 'var(--primary)', marginBottom: '6px' }}>
+            {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
           </h1>
-          <p style={{
-            fontSize: '16px',
-            color: 'var(--text-secondary)',
-            opacity: 0.7
-          }}>
-            {sessionActive
-              ? 'session in progress. keep going.'
-              : data?.streak > 0
-                ? `you are on a ${data.streak}-day streak. don't break it.`
-                : 'sit down and start your streak today.'}
+          <p style={{ fontSize: '16px', color: 'var(--text-secondary)', opacity: 0.7 }}>
+            {sessionActive ? 'session in progress. keep going.' : data?.streak > 0 ? `you are on a ${data.streak}-day streak. don't break it.` : 'sit down and start your streak today.'}
           </p>
         </motion.div>
 
         {/* stat cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '16px',
-          marginBottom: '2rem'
-        }}>
-          <StatCard
-            label="STREAK"
-            value={data?.streak || 0}
-            sub="consecutive days"
-          />
-          <StatCard
-            label="TODAY"
-            value={formatMins(data?.today_minutes)}
-            sub="logged so far"
-            accent
-          />
-          <StatCard
-            label="AURA"
-            value={Math.round(data?.aura_score || 0)}
-            sub="out of 100"
-          />
-          <StatCard
-            label="THIS WEEK"
-            value={data?.weekly_data?.length || 0}
-            sub="active days"
-            accent
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '2rem' }}>
+          <StatCard label="STREAK" value={data?.streak || 0} sub="consecutive days" />
+          <StatCard label="TODAY" value={formatMins(data?.today_minutes)} sub="logged so far" accent />
+          <StatCard label="AURA" value={Math.round(data?.aura_score || 0)} sub="out of 100" />
+          <StatCard label="THIS WEEK" value={data?.weekly_data?.length || 0} sub="active days" accent />
         </div>
 
         {/* session + device + aura */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gap: '16px',
-          marginBottom: '2rem'
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '2rem' }}>
 
-          {/* session control */}
-          <motion.div
-            className="glass"
-            style={{ padding: '2rem', gridColumn: '1' }}
-          >
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: 'var(--text-secondary)',
-              letterSpacing: '2px',
-              marginBottom: '1.5rem',
-              opacity: 0.7
-            }}>CURRENT SESSION</div>
-
+          <motion.div className="glass" style={{ padding: '2rem' }}>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                marginBottom: '1rem'
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
                 <motion.div
                   animate={{ opacity: sessionActive ? [0.5, 1, 0.5] : 1 }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  style={{
-                    width: '10px', height: '10px',
-                    borderRadius: '50%',
-                    background: sessionActive ? '#639922' : 'var(--border)'
-                  }}
-                />
-                <span style={{
-                  fontSize: '15px',
-                  color: 'var(--text-secondary)',
-                  fontWeight: '500'
-                }}>
+                  style={{ width: '10px', height: '10px', borderRadius: '50%', background: sessionActive ? '#639922' : 'var(--border)' }} />
+                <span style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: '500' }}>
                   {sessionActive ? 'session active' : 'no active session'}
                 </span>
               </div>
 
-              <motion.div
-                style={{
-                  fontFamily: 'var(--font-pixel)',
-                  fontSize: '48px',
-                  color: 'var(--primary)',
-                  letterSpacing: '2px',
-                  marginBottom: '1.5rem'
-                }}>
+              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '48px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem' }}>
                 {sessionActive ? formatTime(elapsed) : '00:00:00'}
-              </motion.div>
+              </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
-                <motion.button
-                  className="btn-primary"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={startSession}
-                  disabled={sessionActive}
-                  style={{
-                    flex: 1, padding: '12px',
-                    fontSize: '15px',
-                    opacity: sessionActive ? 0.4 : 1
-                  }}>
+                <motion.button className="btn-primary"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={startSession} disabled={sessionActive}
+                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: sessionActive ? 0.4 : 1 }}>
                   sit down
                 </motion.button>
-                <motion.button
-                  className="btn-outline"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={endSession}
-                  disabled={!sessionActive}
-                  style={{
-                    flex: 1, padding: '12px',
-                    fontSize: '15px',
-                    opacity: !sessionActive ? 0.4 : 1
-                  }}>
+                <motion.button className="btn-outline"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={endSession} disabled={!sessionActive}
+                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
                   stand up
                 </motion.button>
               </div>
 
-              <div style={{
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                opacity: 0.5,
-                marginTop: '1rem'
-              }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '1rem' }}>
                 simulating PIR sensor — hardware connects later
               </div>
             </div>
           </motion.div>
 
-          {/* LED device */}
-          <LEDDevice
-            score={elapsed / 60}
-            sessionActive={sessionActive}
-          />
-
-          {/* aura ring */}
+          <LEDDevice score={elapsed / 60} sessionActive={sessionActive} />
           <AuraRing score={data?.aura_score || 0} />
         </div>
 
         {/* graph + calendar */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '16px'
-        }}>
-
-          {/* 7 day chart */}
-          <motion.div
-            className="glass"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ padding: '1.5rem' }}
-          >
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: 'var(--text-secondary)',
-              letterSpacing: '2px',
-              marginBottom: '1.5rem',
-              opacity: 0.7
-            }}>7-DAY MOMENTUM</div>
-
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <motion.div className="glass" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '1.5rem' }}>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>7-DAY MOMENTUM</div>
             {data?.weekly_data?.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={data.weekly_data}>
-                  <XAxis
-                    dataKey="date"
+                  <XAxis dataKey="date"
                     tickFormatter={d => new Date(d).toLocaleDateString('en', { weekday: 'short' })}
                     tick={{ fontSize: 12, fill: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
+                    axisLine={false} tickLine={false} />
                   <YAxis hide />
-                  <Tooltip
-                    formatter={(v) => [`${Math.round(v)} mins`, 'studied']}
-                    contentStyle={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '10px',
-                      fontFamily: 'var(--font-body)',
-                      fontSize: '13px'
-                    }}
-                  />
+                  <Tooltip formatter={(v) => [`${Math.round(v)} mins`, 'studied']}
+                    contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontFamily: 'var(--font-body)', fontSize: '13px' }} />
                   <Bar dataKey="total_mins" radius={[6, 6, 0, 0]}>
                     {data.weekly_data.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={i === data.weekly_data.length - 1 ? 'var(--primary)' : 'var(--primary-light)'}
-                      />
+                      <Cell key={i} fill={i === data.weekly_data.length - 1 ? 'var(--primary)' : 'var(--primary-light)'} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{
-                height: '180px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
+              <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '32px' }}>🪑</div>
-                <div style={{
-                  fontFamily: 'var(--font-pixel)',
-                  fontSize: '16px',
-                  color: 'var(--primary)',
-                  opacity: 0.6
-                }}>your desk is quiet</div>
-                <div style={{
-                  fontSize: '14px',
-                  color: 'var(--text-secondary)',
-                  opacity: 0.5
-                }}>sit down and change that</div>
+                <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '16px', color: 'var(--primary)', opacity: 0.6 }}>your desk is quiet</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)', opacity: 0.5 }}>sit down and change that</div>
               </div>
             )}
           </motion.div>
 
-          {/* calendar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <StreakCalendar dates={data?.all_dates || []} />
           </motion.div>
         </div>
