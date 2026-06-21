@@ -2,8 +2,31 @@
 @import '@fontsource/plus-jakarta-sans';
 @import '@fontsource/pacifico';
 
-/* ── DEFAULT — BERRY DREAMS ─────────────────────────────── */
+/* ── DEFAULT — LAVENDER HAZE ─────────────────────────────── */
 :root {
+  --bg: #F5F0FF;
+  --surface: #ffffff;
+  --surface-2: #DDD0FF;
+  --primary: #7B4FD4;
+  --primary-light: #C4A0FF;
+  --accent: #FFD700;
+  --accent-dark: #b89600;
+  --text-primary: #2A0A5A;
+  --text-secondary: #5A3A8A;
+  --text-muted: #7B4FD4;
+  --border: rgba(123, 79, 212, 0.15);
+  --font-pixel: 'Pixelify Sans', monospace;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-logo: 'Pacifico', cursive;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+}
+
+/* ── LIGHT THEMES ───────────────────────────────────────── */
+
+[data-theme="berry_dreams"] {
   --bg: #FEF0F4;
   --surface: #ffffff;
   --surface-2: #E5F4F4;
@@ -15,16 +38,7 @@
   --text-secondary: #6B1A3A;
   --text-muted: #BF1E62;
   --border: rgba(191, 30, 98, 0.12);
-  --font-pixel: 'Pixelify Sans', monospace;
-  --font-body: 'Plus Jakarta Sans', sans-serif;
-  --font-logo: 'Pacifico', cursive;
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
 }
-
-/* ── LIGHT THEMES ───────────────────────────────────────── */
 
 [data-theme="majorelle"] {
   --bg: #E8EDDF;
@@ -266,7 +280,7 @@
   --border: rgba(157, 143, 255, 0.2);
 }
 
-/* ── GLASS VARIANTS PER THEME ────────────────────────────── */
+/* ── GLASS VARIANTS ──────────────────────────────────────── */
 .glass {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(16px);
@@ -318,7 +332,7 @@ p, span, label, input, button {
 
 .btn-primary {
   background: var(--primary);
-  color: var(--bg);
+  color: white;
   border: none;
   border-radius: var(--radius-md);
   padding: 12px 24px;
@@ -347,7 +361,7 @@ p, span, label, input, button {
 
 .btn-outline:hover {
   background: var(--primary);
-  color: var(--bg);
+  color: white;
 }
 
 input, textarea {

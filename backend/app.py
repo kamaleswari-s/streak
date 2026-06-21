@@ -4,6 +4,7 @@ from flask_cors import CORS
 import psycopg2
 import psycopg2.extras
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 import bcrypt
 import jwt
 import os
@@ -11,6 +12,8 @@ from dotenv import load_dotenv
 from functools import wraps
 
 load_dotenv()
+
+IST = ZoneInfo("Asia/Kolkata")
 
 app = Flask(__name__)
 CORS(app, origins="*")
@@ -46,8 +49,8 @@ def init_db():
             id SERIAL PRIMARY KEY,
             user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
             date TEXT NOT NULL,
-            start_time TIMESTAMP NOT NULL,
-            end_time TIMESTAMP,
+            start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+            end_time TIMESTAMP WITH TIME ZONE,
             duration_minutes REAL DEFAULT 0,
             momentum_score REAL DEFAULT 0,
             aura_score REAL DEFAULT 0
@@ -108,7 +111,7 @@ def get_streak(user_id):
         return 0
 
     streak = 0
-    check_date = date.today()
+    check_date = datetime.now(IST).date()
 
     for row in rows:
         session_date = date.fromisoformat(row["date"])
@@ -213,7 +216,7 @@ def start_session():
     if user_id in active_sessions:
         return jsonify({"error": "Session already active"}), 400
 
-    now = datetime.now()
+    now = datetime.now(IST)
     conn = get_db()
     cur = conn.cursor()
     cur.execute(
@@ -240,7 +243,7 @@ def end_session():
     if user_id not in active_sessions:
         return jsonify({"error": "No active session"}), 400
 
-    now = datetime.now()
+    now = datetime.now(IST)
     session_data = active_sessions[user_id]
     duration = (now - session_data["start_time"]).total_seconds() / 60
 
@@ -252,7 +255,7 @@ def end_session():
     cur.execute("""
         SELECT COUNT(DISTINCT date) as count FROM sessions
         WHERE user_id = %s AND date >= %s AND duration_minutes > 0
-    """, (user_id, (date.today() - timedelta(days=7)).isoformat()))
+    """, (user_id, (datetime.now(IST).date() - timedelta(days=7)).isoformat()))
     sessions_this_week = cur.fetchone()["count"]
 
     score = calculate_momentum(duration, sessions_this_week, streak)
@@ -263,7 +266,6 @@ def end_session():
     """, (user_id,))
     avg_dur = cur.fetchone()["avg_dur"] or 0
 
-    # FIXED — removed the broken subquery
     cur.execute("""
         SELECT COUNT(*) as total_days
         FROM (SELECT DISTINCT date FROM sessions WHERE user_id = %s) d
@@ -317,13 +319,15 @@ def dashboard():
     cur.execute("SELECT name, theme, daily_goal_minutes, device_name FROM users WHERE id=%s", (user_id,))
     user = cur.fetchone()
 
+    today_ist = datetime.now(IST).date()
+
     cur.execute("""
         SELECT date, SUM(duration_minutes) as total_mins,
         MAX(momentum_score) as score
         FROM sessions WHERE user_id=%s
         AND date >= %s
         GROUP BY date ORDER BY date ASC
-    """, (user_id, (date.today() - timedelta(days=7)).isoformat()))
+    """, (user_id, (today_ist - timedelta(days=7)).isoformat()))
     weekly_data = cur.fetchall()
 
     cur.execute("""
@@ -335,7 +339,7 @@ def dashboard():
     cur.execute("""
         SELECT SUM(duration_minutes) as total
         FROM sessions WHERE user_id=%s AND date=%s
-    """, (user_id, date.today().isoformat()))
+    """, (user_id, today_ist.isoformat()))
     today_row = cur.fetchone()
     today_minutes = round(today_row["total"] or 0, 1)
 
@@ -370,7 +374,7 @@ def analytics():
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     cur.execute("""
-        SELECT EXTRACT(HOUR FROM start_time) as hour,
+        SELECT EXTRACT(HOUR FROM start_time AT TIME ZONE 'Asia/Kolkata') as hour,
         COUNT(*) as count, AVG(duration_minutes) as avg_dur
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         GROUP BY hour ORDER BY count DESC
@@ -378,20 +382,21 @@ def analytics():
     by_hour = cur.fetchall()
 
     cur.execute("""
-        SELECT TO_CHAR(start_time, 'Day') as day,
+        SELECT TO_CHAR(start_time AT TIME ZONE 'Asia/Kolkata', 'Day') as day,
         COUNT(*) as count, AVG(duration_minutes) as avg_dur
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         GROUP BY day ORDER BY count DESC
     """, (user_id,))
     by_day = cur.fetchall()
 
+    today_ist = datetime.now(IST).date()
     cur.execute("""
         SELECT date, SUM(duration_minutes) as total,
         MAX(momentum_score) as score
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         AND date >= %s
         GROUP BY date ORDER BY date ASC
-    """, (user_id, (date.today() - timedelta(days=30)).isoformat()))
+    """, (user_id, (today_ist - timedelta(days=30)).isoformat()))
     monthly = cur.fetchall()
 
     cur.execute("""
@@ -420,18 +425,21 @@ def history():
     user_id = request.user_id
     filter_by = request.args.get("filter", "all")
 
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    today_ist = datetime.now(IST).date()
 
     if filter_by == "week":
-        since = (date.today() - timedelta(days=7)).isoformat()
+        since = (today_ist - timedelta(days=7)).isoformat()
     elif filter_by == "month":
-        since = (date.today() - timedelta(days=30)).isoformat()
+        since = (today_ist - timedelta(days=30)).isoformat()
     else:
         since = "2000-01-01"
 
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
-        SELECT id, date, start_time, end_time,
+        SELECT id, date,
+        start_time AT TIME ZONE 'Asia/Kolkata' as start_time,
+        end_time AT TIME ZONE 'Asia/Kolkata' as end_time,
         duration_minutes, momentum_score, aura_score
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         AND date >= %s ORDER BY start_time DESC
@@ -447,6 +455,8 @@ def history():
 @token_required
 def leaderboard():
     user_id = request.user_id
+    today_ist = datetime.now(IST).date()
+
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -461,7 +471,7 @@ def leaderboard():
         GROUP BY u.id, u.name, u.anonymous_mode
         ORDER BY aura_score DESC
         LIMIT 20
-    """, ((date.today() - timedelta(days=7)).isoformat(),))
+    """, ((today_ist - timedelta(days=7)).isoformat(),))
     board = cur.fetchall()
     cur.close()
     conn.close()

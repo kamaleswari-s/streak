@@ -13,6 +13,8 @@ export function AuthProvider({ children }) {
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser))
       setToken(savedToken)
+      const parsed = JSON.parse(savedUser)
+      document.documentElement.setAttribute('data-theme', parsed.theme || 'lavender_haze')
     }
     setLoading(false)
   }, [])
@@ -22,7 +24,7 @@ export function AuthProvider({ children }) {
     setToken(authToken)
     localStorage.setItem('streak_user', JSON.stringify(userData))
     localStorage.setItem('streak_token', authToken)
-    document.documentElement.setAttribute('data-theme', userData.theme || 'berry_dreams')
+    document.documentElement.setAttribute('data-theme', userData.theme || 'lavender_haze')
   }
 
   const logout = () => {
@@ -34,8 +36,9 @@ export function AuthProvider({ children }) {
   }
 
   const updateTheme = (theme) => {
-    setUser(prev => ({ ...prev, theme }))
-    localStorage.setItem('streak_user', JSON.stringify({ ...user, theme }))
+    const updated = { ...user, theme }
+    setUser(updated)
+    localStorage.setItem('streak_user', JSON.stringify(updated))
     document.documentElement.setAttribute('data-theme', theme)
   }
 
