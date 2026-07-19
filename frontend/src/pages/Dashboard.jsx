@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import io from 'socket.io-client'
@@ -8,6 +8,216 @@ import Navbar from '../components/layout/Navbar'
 
 const API = 'http://localhost:5000'
 
+// ── COLD START ────────────────────────────────────────────
+function ColdStart({ onStart }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1.2 }}
+      style={{
+        minHeight: '80vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', padding: '4rem 2rem',
+        position: 'relative', overflow: 'hidden'
+      }}>
+
+      {/* floating particles */}
+      {[...Array(8)].map((_, i) => (
+        <motion.div key={i}
+          animate={{ y: [0, -24, 0], opacity: [0, 0.35, 0], x: [0, (i % 2 === 0 ? 12 : -12), 0] }}
+          transition={{ duration: 4 + i * 0.6, repeat: Infinity, delay: i * 0.6 }}
+          style={{
+            position: 'absolute',
+            width: i % 3 === 0 ? '10px' : '6px',
+            height: i % 3 === 0 ? '10px' : '6px',
+            borderRadius: '50%',
+            background: i % 2 === 0 ? 'var(--primary)' : 'var(--accent)',
+            left: `${10 + i * 10}%`,
+            top: `${20 + (i % 4) * 18}%`,
+            pointerEvents: 'none'
+          }} />
+      ))}
+
+      {/* sleeping device */}
+      <motion.div
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
+        <svg width="180" height="180" viewBox="0 0 100 100">
+          <motion.circle cx="50" cy="8" r="2.5"
+            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
+            transition={{ duration: 3, repeat: Infinity }} />
+          <motion.circle cx="73" cy="15" r="2.5"
+            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
+            transition={{ duration: 3, repeat: Infinity, delay: 0.5 }} />
+          <motion.circle cx="27" cy="15" r="2.5"
+            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
+            transition={{ duration: 3, repeat: Infinity, delay: 1 }} />
+          <motion.circle cx="82" cy="38" r="2.5"
+            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
+            transition={{ duration: 3, repeat: Infinity, delay: 1.5 }} />
+          <motion.circle cx="18" cy="38" r="2.5"
+            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
+            transition={{ duration: 3, repeat: Infinity, delay: 2 }} />
+          <rect x="20" y="62" width="60" height="7" rx="3.5" fill="var(--primary)" opacity="0.2" />
+          <rect x="24" y="69" width="6" height="16" rx="3" fill="var(--primary)" opacity="0.2" />
+          <rect x="70" y="69" width="6" height="16" rx="3" fill="var(--primary)" opacity="0.2" />
+          <rect x="30" y="44" width="40" height="20" rx="5" fill="var(--primary-light)" opacity="0.2" />
+          <rect x="34" y="48" width="32" height="12" rx="3" fill="white" opacity="0.15" />
+          <motion.circle cx="50" cy="38" r="6"
+            fill="var(--border)"
+            animate={{ opacity: [0.2, 0.5, 0.2], r: [5, 7, 5] }}
+            transition={{ duration: 3, repeat: Infinity }} />
+          <circle cx="50" cy="38" r="2.5" fill="white" opacity="0.3" />
+        </svg>
+      </motion.div>
+
+      {/* main text */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6, duration: 0.9 }}
+        style={{
+          fontFamily: 'var(--font-pixel)',
+          fontSize: 'clamp(28px, 5vw, 52px)',
+          color: 'var(--primary)',
+          marginBottom: '1.2rem',
+          lineHeight: 1.2,
+          position: 'relative', zIndex: 1
+        }}>
+        your desk is quiet.
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1, duration: 0.8 }}
+        style={{
+          fontSize: '18px', color: 'var(--text-secondary)',
+          lineHeight: 1.8, maxWidth: '480px',
+          marginBottom: '0.75rem',
+          position: 'relative', zIndex: 1
+        }}>
+        you already study hard. you just have nothing to show for it.
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.4, duration: 0.8 }}
+        style={{
+          fontSize: '16px', color: 'var(--text-secondary)',
+          opacity: 0.55, marginBottom: '3rem',
+          position: 'relative', zIndex: 1
+        }}>
+        sit down and change that.
+      </motion.div>
+
+      {/* glowing CTA button */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1.8, duration: 0.6, type: 'spring', stiffness: 200 }}
+        style={{ position: 'relative', zIndex: 1 }}>
+        <motion.button
+          className="btn-primary"
+          animate={{
+            boxShadow: [
+              '0 0 0px var(--primary)',
+              '0 0 40px var(--primary)',
+              '0 0 0px var(--primary)'
+            ]
+          }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={onStart}
+          style={{ padding: '20px 52px', fontSize: '20px', letterSpacing: '1px' }}>
+          sit down ✦
+        </motion.button>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.4, duration: 1 }}
+        style={{
+          marginTop: '2rem', fontSize: '14px',
+          color: 'var(--text-secondary)', opacity: 0.35,
+          position: 'relative', zIndex: 1
+        }}>
+        your first session starts everything
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── STREAK DNA ────────────────────────────────────────────
+function StreakDNA({ dates, streak }) {
+  const bars = 42
+  const segments = []
+
+  for (let i = 0; i < bars; i++) {
+    const dateIndex = dates.length - bars + i
+    const hasSession = dateIndex >= 0 && dates[dateIndex] !== undefined
+    const height = hasSession
+      ? 30 + Math.abs(Math.sin(i * 0.8 + streak * 0.3)) * 60
+      : 6 + Math.abs(Math.sin(i * 1.2)) * 10
+    const opacity = hasSession
+      ? 0.5 + Math.abs(Math.sin(i * 0.5)) * 0.5
+      : 0.12
+    segments.push({ hasSession, height, opacity })
+  }
+
+  return (
+    <motion.div className="glass" style={{ padding: '1.5rem' }}>
+      <div style={{
+        fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)',
+        letterSpacing: '2px', marginBottom: '0.5rem', opacity: 0.7
+      }}>STREAK DNA</div>
+      <div style={{
+        fontSize: '12px', color: 'var(--text-secondary)',
+        opacity: 0.45, marginBottom: '1rem'
+      }}>
+        your unique study fingerprint
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        gap: '3px', height: '80px', overflow: 'hidden'
+      }}>
+        {segments.map((seg, i) => (
+          <motion.div key={i}
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={{ scaleY: 1, opacity: seg.opacity }}
+            transition={{ delay: i * 0.015, duration: 0.4, ease: 'easeOut' }}
+            style={{
+              flex: 1,
+              height: `${seg.height}%`,
+              background: seg.hasSession
+                ? 'var(--primary)'
+                : 'var(--border)',
+              borderRadius: '3px',
+              transformOrigin: 'bottom'
+            }} />
+        ))}
+      </div>
+
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        marginTop: '8px', fontSize: '11px',
+        color: 'var(--text-secondary)', opacity: 0.4
+      }}>
+        <span>42 days ago</span>
+        <span>{dates.length} sessions logged</span>
+        <span>today</span>
+      </div>
+    </motion.div>
+  )
+}
+
+// ── STAT CARD ─────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }) {
   return (
     <motion.div
@@ -31,6 +241,7 @@ function StatCard({ label, value, sub, accent }) {
   )
 }
 
+// ── LED DEVICE ────────────────────────────────────────────
 function LEDDevice({ score, sessionActive }) {
   const getLEDColor = () => {
     if (!sessionActive && score === 0) return { color: '#555', glow: '#555', label: 'dim', desc: 'no session today' }
@@ -70,10 +281,7 @@ function LEDDevice({ score, sessionActive }) {
         <rect x="30" y="44" width="40" height="20" rx="5" fill="var(--primary-light)" />
         <rect x="34" y="48" width="32" height="12" rx="3" fill="white" opacity="0.5" />
         <motion.circle cx="50" cy="38" r="7"
-          animate={{
-            fill: led.color,
-            r: sessionActive ? [6, 9, 6] : 6,
-          }}
+          animate={{ fill: led.color, r: sessionActive ? [6, 9, 6] : 6 }}
           transition={{ duration: 1.8, repeat: Infinity }} />
         <circle cx="50" cy="38" r="3" fill="white" />
       </motion.svg>
@@ -83,6 +291,7 @@ function LEDDevice({ score, sessionActive }) {
   )
 }
 
+// ── AURA RING ─────────────────────────────────────────────
 function AuraRing({ score }) {
   const radius = 54
   const circumference = 2 * Math.PI * radius
@@ -117,6 +326,7 @@ function AuraRing({ score }) {
   )
 }
 
+// ── STREAK CALENDAR ───────────────────────────────────────
 function StreakCalendar({ dates }) {
   const today = new Date()
   const days = []
@@ -159,6 +369,7 @@ function StreakCalendar({ dates }) {
   )
 }
 
+// ── MAIN DASHBOARD ────────────────────────────────────────
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
   const [data, setData] = useState(null)
@@ -231,7 +442,6 @@ export default function Dashboard() {
     return m === 0 ? `${h}h` : `${h}h ${m}m`
   }
 
-  // ── INSTANT session buttons ──────────────────────────────
   const startSession = async () => {
     if (sessionActive) return
     const now = new Date()
@@ -264,6 +474,7 @@ export default function Dashboard() {
     }
   }
 
+  // ── LOADING ──────────────────────────────────────────────
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
       <motion.div
@@ -275,22 +486,46 @@ export default function Dashboard() {
     </div>
   )
 
+  // ── COLD START ───────────────────────────────────────────
+  const hasNoSessions = !data?.all_dates?.length && !sessionActive
+  if (hasNoSessions) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <Navbar />
+      <ColdStart onStart={startSession} />
+    </div>
+  )
+
+  // ── MAIN DASHBOARD ───────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
 
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+
+        {/* greeting */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 36px)', color: 'var(--primary)', marginBottom: '6px' }}>
+          <h1 style={{
+            fontFamily: 'var(--font-pixel)',
+            fontSize: 'clamp(24px, 4vw, 36px)',
+            color: 'var(--primary)', marginBottom: '6px'
+          }}>
             {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
           </h1>
           <p style={{ fontSize: '16px', color: 'var(--text-secondary)', opacity: 0.7 }}>
-            {sessionActive ? 'session in progress. keep going.' : data?.streak > 0 ? `you are on a ${data.streak}-day streak. don't break it.` : 'sit down and start your streak today.'}
+            {sessionActive
+              ? 'session in progress. keep going.'
+              : data?.streak > 0
+                ? `you are on a ${data.streak}-day streak. don't break it.`
+                : 'sit down and start your streak today.'}
           </p>
         </motion.div>
 
         {/* stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '2rem' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '16px', marginBottom: '2rem'
+        }}>
           <StatCard label="STREAK" value={data?.streak || 0} sub="consecutive days" />
           <StatCard label="TODAY" value={formatMins(data?.today_minutes)} sub="logged so far" accent />
           <StatCard label="AURA" value={Math.round(data?.aura_score || 0)} sub="out of 100" />
@@ -298,8 +533,11 @@ export default function Dashboard() {
         </div>
 
         {/* session + device + aura */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '2rem' }}>
-
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '16px', marginBottom: '2rem'
+        }}>
           <motion.div className="glass" style={{ padding: '2rem' }}>
             <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
             <div style={{ textAlign: 'center' }}>
@@ -342,9 +580,16 @@ export default function Dashboard() {
           <AuraRing score={data?.aura_score || 0} />
         </div>
 
-        {/* graph + calendar */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <motion.div className="glass" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '1.5rem' }}>
+        {/* graph + calendar + DNA */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '16px',
+          marginBottom: '16px'
+        }}>
+          <motion.div className="glass"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            style={{ padding: '1.5rem' }}>
             <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>7-DAY MOMENTUM</div>
             {data?.weekly_data?.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
@@ -354,7 +599,8 @@ export default function Dashboard() {
                     tick={{ fontSize: 12, fill: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}
                     axisLine={false} tickLine={false} />
                   <YAxis hide />
-                  <Tooltip formatter={(v) => [`${Math.round(v)} mins`, 'studied']}
+                  <Tooltip
+                    formatter={(v) => [`${Math.round(v)} mins`, 'studied']}
                     contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontFamily: 'var(--font-body)', fontSize: '13px' }} />
                   <Bar dataKey="total_mins" radius={[6, 6, 0, 0]}>
                     {data.weekly_data.map((_, i) => (
@@ -372,10 +618,24 @@ export default function Dashboard() {
             )}
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}>
             <StreakCalendar dates={data?.all_dates || []} />
           </motion.div>
         </div>
+
+        {/* streak DNA — full width */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}>
+          <StreakDNA
+            dates={data?.all_dates || []}
+            streak={data?.streak || 0}
+          />
+        </motion.div>
+
       </div>
     </div>
   )

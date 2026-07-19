@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
       setUser(JSON.parse(savedUser))
       setToken(savedToken)
       const parsed = JSON.parse(savedUser)
-      document.documentElement.setAttribute('data-theme', parsed.theme || 'lavender_haze')
+      document.documentElement.setAttribute('data-theme', parsed.theme || 'majorelle')
     }
     setLoading(false)
   }, [])
@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
     setToken(authToken)
     localStorage.setItem('streak_user', JSON.stringify(userData))
     localStorage.setItem('streak_token', authToken)
-    document.documentElement.setAttribute('data-theme', userData.theme || 'lavender_haze')
+    document.documentElement.setAttribute('data-theme', userData.theme || 'majorelle')
   }
 
   const logout = () => {

@@ -52,21 +52,7 @@ export default function Signup() {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      <div style={{
-        position: 'absolute', top: '-10%', left: '-10%',
-        width: '500px', height: '500px',
-        background: 'var(--primary-light)',
-        borderRadius: '50%', filter: 'blur(100px)',
-        opacity: 0.3, pointerEvents: 'none'
-      }} />
-      <div style={{
-        position: 'absolute', bottom: '-10%', right: '-10%',
-        width: '400px', height: '400px',
-        background: 'var(--accent)',
-        borderRadius: '50%', filter: 'blur(100px)',
-        opacity: 0.25, pointerEvents: 'none'
-      }} />
-
+      
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}

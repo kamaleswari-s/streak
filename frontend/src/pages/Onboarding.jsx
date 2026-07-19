@@ -37,7 +37,7 @@ export default function Onboarding() {
   const navigate = useNavigate()
   const { user, token, updateTheme } = useAuth()
   const [step, setStep] = useState(0)
-  const [selectedTheme, setSelectedTheme] = useState('lavender_haze')
+  const [selectedTheme, setSelectedTheme] = useState('majorelle')
   const [themeMode, setThemeMode] = useState('light')
   const [selectedGoal, setSelectedGoal] = useState(60)
   const [deviceName, setDeviceName] = useState('')
