@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import io from 'socket.io-client'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 
 const API = 'http://localhost:5000'
@@ -112,7 +113,6 @@ function WelcomeTour({ userName, onDone }) {
           exit={{ opacity: 0, y: -30, scale: 0.96 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
           style={{ maxWidth: '560px', width: '100%' }}>
-
           {current.isLogo ? (
             <>
               <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}
@@ -252,16 +252,6 @@ function ColdStart({ onEnter }) {
   )
 }
 
-function StatCard({ label, value, sub, accent }) {
-  return (
-    <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>
-      <div style={{ fontSize: '11px', fontWeight: '700', color: accent ? 'var(--accent-dark)' : 'var(--text-primary)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '42px', color: accent ? 'var(--accent-dark)' : 'var(--primary)', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.65 }}>{sub}</div>}
-    </motion.div>
-  )
-}
-
 function LEDDevice({ score, sessionActive }) {
   const getLEDColor = () => {
     if (!sessionActive) return { color: '#ffffff', label: 'white', desc: 'standby — no active session' }
@@ -330,7 +320,7 @@ function AuraRing({ score }) {
   )
 }
 
-function DailyQuoteBanner({ streak, sessionActive }) {
+function DailyQuoteBanner({ streak }) {
   const quote = quotes[new Date().getDate() % quotes.length]
   return (
     <motion.div className="glass"
@@ -360,8 +350,69 @@ function DailyQuoteBanner({ streak, sessionActive }) {
   )
 }
 
+function UpcomingSessionsCard({ navigate }) {
+  const [events, setEvents] = useState([])
+  const todayStr = new Date().toISOString().split('T')[0]
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+
+  useEffect(() => {
+    const saved = localStorage.getItem('streak_calendar_events')
+    if (saved) {
+      const all = JSON.parse(saved)
+      const upcoming = all
+        .filter(e => e.date >= todayStr && !e.completed)
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))
+        .slice(0, 2)
+      setEvents(upcoming)
+    }
+  }, [])
+
+  const formatDateShort = (dateStr) => {
+    if (dateStr === todayStr) return 'today'
+    if (dateStr === tomorrowStr) return 'tomorrow'
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+
+  return (
+    <motion.div className="glass" whileHover={{ y: -4 }}
+      style={{ padding: '1.5rem', cursor: 'pointer' }}
+      onClick={() => navigate('/calendar')}>
+      <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '12px', opacity: 0.7 }}>UPCOMING</div>
+
+      {events.length === 0 ? (
+        <div style={{ textAlign: 'center', paddingTop: '0.5rem' }}>
+          <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'var(--primary)', marginBottom: '6px' }}>nothing planned</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.5 }}>tap to plan a session →</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {events.map((event, i) => {
+            const isToday = event.date === todayStr
+            return (
+              <div key={event.id} style={{
+                padding: '8px 12px', borderRadius: '10px',
+                background: isToday ? 'rgba(96,96,210,0.1)' : 'var(--surface)',
+                border: isToday ? '1.5px solid var(--primary)' : '1.5px solid var(--border)'
+              }}>
+                <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '13px', color: 'var(--primary)', marginBottom: '2px' }}>{event.title}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.65 }}>
+                  {formatDateShort(event.date)}{event.time ? ` · ${event.time}` : ''}{event.duration ? ` · ${event.duration}` : ''}
+                </div>
+              </div>
+            )
+          })}
+          <div style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: '600', marginTop: '4px', opacity: 0.7 }}>
+            view all in calendar →
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [sessionActive, setSessionActive] = useState(false)
   const [sessionStart, setSessionStart] = useState(null)
@@ -511,20 +562,33 @@ export default function Dashboard() {
         </motion.div>
 
         {/* quote + streak merged banner */}
-        <DailyQuoteBanner streak={data?.streak || 0} sessionActive={sessionActive} />
+        <DailyQuoteBanner streak={data?.streak || 0} />
 
-        {/* stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '2rem' }}>
-          <StatCard label="STREAK" value={data?.streak || 0} sub="consecutive days" />
-          <StatCard label="TODAY" value={formatMins(data?.today_minutes)} sub="logged so far" accent />
-          <StatCard label="AURA" value={Math.round(data?.aura_score || 0)} sub="out of 100" />
-          <StatCard label="THIS WEEK" value={data?.weekly_data?.length || 0} sub="active days" accent />
+        {/* stat cards — today, aura, this week, upcoming */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '2rem' }}>
+          <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>TODAY</div>
+            <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '42px', color: 'var(--accent-dark)', lineHeight: 1 }}>{formatMins(data?.today_minutes)}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.65 }}>logged so far</div>
+          </motion.div>
+
+          <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>AURA</div>
+            <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '42px', color: 'var(--primary)', lineHeight: 1 }}>{Math.round(data?.aura_score || 0)}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.65 }}>out of 100</div>
+          </motion.div>
+
+          <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>THIS WEEK</div>
+            <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '42px', color: 'var(--accent-dark)', lineHeight: 1 }}>{data?.weekly_data?.length || 0}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.65 }}>active days</div>
+          </motion.div>
+
+          <UpcomingSessionsCard navigate={navigate} />
         </div>
 
         {/* session + device + aura — original 3 column layout */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-
-          {/* current session */}
           <motion.div className="glass" style={{ padding: '2rem' }}>
             <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
             <div style={{ textAlign: 'center' }}>
