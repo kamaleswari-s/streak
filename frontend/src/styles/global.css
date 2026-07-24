@@ -15,6 +15,7 @@
   --text-secondary: #2a2a6a;
   --text-muted: #6060D2;
   --border: rgba(96, 96, 210, 0.35);
+  --btn-text: #ffffff;
   --font-pixel: 'Pixelify Sans', monospace;
   --font-body: 'Plus Jakarta Sans', sans-serif;
   --font-logo: 'Pacifico', cursive;
@@ -38,6 +39,7 @@
   --text-secondary: #5B1030;
   --text-muted: #BF1E62;
   --border: rgba(191, 30, 98, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="majorelle"] {
@@ -52,6 +54,7 @@
   --text-secondary: #2a2a6a;
   --text-muted: #6060D2;
   --border: rgba(96, 96, 210, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="olive_garden"] {
@@ -66,6 +69,7 @@
   --text-secondary: #2e2000;
   --text-muted: #828600;
   --border: rgba(70, 53, 0, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="matcha_latte"] {
@@ -80,6 +84,7 @@
   --text-secondary: #253D22;
   --text-muted: #4A6741;
   --border: rgba(74, 103, 65, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="desert_sun"] {
@@ -94,6 +99,7 @@
   --text-secondary: #5A2A00;
   --text-muted: #C4570A;
   --border: rgba(196, 87, 10, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="mint_chip"] {
@@ -108,6 +114,7 @@
   --text-secondary: #0F3A22;
   --text-muted: #1A7A4A;
   --border: rgba(26, 122, 74, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="lavender_haze"] {
@@ -122,6 +129,7 @@
   --text-secondary: #3A1A70;
   --text-muted: #7B4FD4;
   --border: rgba(123, 79, 212, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="cloud_nine"] {
@@ -136,6 +144,7 @@
   --text-secondary: #0F2A55;
   --text-muted: #2E6FD4;
   --border: rgba(46, 111, 212, 0.35);
+  --btn-text: #ffffff;
 }
 
 [data-theme="ocean_breeze"] {
@@ -150,6 +159,7 @@
   --text-secondary: #003540;
   --text-muted: #007A8A;
   --border: rgba(0, 122, 138, 0.35);
+  --btn-text: #ffffff;
 }
 
 /* ── DARK THEMES ─────────────────────────────────────────── */
@@ -166,6 +176,7 @@
   --text-secondary: #C0B0D8;
   --text-muted: #50C878;
   --border: rgba(80, 200, 120, 0.25);
+  --btn-text: #0D0F14;
 }
 
 [data-theme="forest"] {
@@ -180,6 +191,7 @@
   --text-secondary: #D0C090;
   --text-muted: #7FB069;
   --border: rgba(127, 176, 105, 0.3);
+  --btn-text: #1C2B1A;
 }
 
 [data-theme="mocha"] {
@@ -194,6 +206,7 @@
   --text-secondary: #D0BDA8;
   --text-muted: #C8956C;
   --border: rgba(200, 149, 108, 0.3);
+  --btn-text: #1E1410;
 }
 
 [data-theme="neon_noir"] {
@@ -208,6 +221,7 @@
   --text-secondary: #D0B8F0;
   --text-muted: #B44FFF;
   --border: rgba(180, 79, 255, 0.3);
+  --btn-text: #ffffff;
 }
 
 [data-theme="cyber_gold"] {
@@ -222,6 +236,7 @@
   --text-secondary: #F0E090;
   --text-muted: #FFD700;
   --border: rgba(255, 215, 0, 0.3);
+  --btn-text: #0C0C08;
 }
 
 [data-theme="blood_orange"] {
@@ -236,6 +251,7 @@
   --text-secondary: #F0C8B0;
   --text-muted: #FF4500;
   --border: rgba(255, 69, 0, 0.3);
+  --btn-text: #ffffff;
 }
 
 [data-theme="arctic"] {
@@ -250,20 +266,23 @@
   --text-secondary: #B8D8F0;
   --text-muted: #00D4FF;
   --border: rgba(0, 212, 255, 0.25);
+  --btn-text: #080E14;
 }
 
+/* obsidian — primary is light grey so btn text must be dark */
 [data-theme="obsidian"] {
   --bg: #0A0A0A;
   --surface: #1A1A1A;
   --surface-2: #242424;
-  --primary: #E8E8E8;
+  --primary: #AAAAAA;
   --primary-light: #242424;
-  --accent: #888888;
+  --accent: #666666;
   --accent-dark: #ffffff;
   --text-primary: #ffffff;
   --text-secondary: #CCCCCC;
   --text-muted: #888888;
   --border: rgba(255, 255, 255, 0.18);
+  --btn-text: #0A0A0A;
 }
 
 [data-theme="galaxy"] {
@@ -278,11 +297,11 @@
   --text-secondary: #C8C0F0;
   --text-muted: #9D8FFF;
   --border: rgba(157, 143, 255, 0.3);
+  --btn-text: #ffffff;
 }
 
 /* ── GLASS VARIANTS ──────────────────────────────────────── */
 
-/* light themes — strong white card with visible border and shadow */
 .glass {
   background: #ffffff;
   border: 2px solid var(--border);
@@ -290,7 +309,6 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.05);
 }
 
-/* dark themes — semi transparent dark card */
 [data-theme="midnight_garden"] .glass,
 [data-theme="forest"] .glass,
 [data-theme="mocha"] .glass,
@@ -344,7 +362,7 @@ button {
 /* ── BUTTONS ─────────────────────────────────────────────── */
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: var(--btn-text);
   border: none;
   border-radius: var(--radius-md);
   padding: 12px 24px;
@@ -355,7 +373,7 @@ button {
   transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
-.btn-primary:hover { opacity: 0.9; }
+.btn-primary:hover { opacity: 0.88; }
 .btn-primary:active { transform: scale(0.98); }
 
 .btn-outline {
@@ -373,7 +391,7 @@ button {
 
 .btn-outline:hover {
   background: var(--primary);
-  color: white;
+  color: var(--btn-text);
 }
 
 /* ── INPUTS ──────────────────────────────────────────────── */
@@ -397,7 +415,7 @@ input:focus, textarea:focus, select:focus {
 
 input::placeholder, textarea::placeholder {
   color: var(--text-secondary);
-  opacity: 0.55;
+  opacity: 0.6;
   font-weight: 400;
 }
 
@@ -416,15 +434,7 @@ input::placeholder, textarea::placeholder {
   background: var(--primary);
 }
 
-/* ── STREAK BANNER TEXT FIX FOR DARK THEMES ─────────────── */
-[data-theme="midnight_garden"] .streak-badge-text,
-[data-theme="forest"] .streak-badge-text,
-[data-theme="mocha"] .streak-badge-text,
-[data-theme="neon_noir"] .streak-badge-text,
-[data-theme="cyber_gold"] .streak-badge-text,
-[data-theme="blood_orange"] .streak-badge-text,
-[data-theme="arctic"] .streak-badge-text,
-[data-theme="obsidian"] .streak-badge-text,
-[data-theme="galaxy"] .streak-badge-text {
-  color: white !important;
+/* ── STREAK BADGE — always white text since bg is primary ── */
+.streak-badge-text {
+  color: var(--btn-text) !important;
 }
