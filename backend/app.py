@@ -438,8 +438,8 @@ def history():
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
         SELECT id, date,
-        start_time AT TIME ZONE 'Asia/Kolkata' as start_time,
-        end_time AT TIME ZONE 'Asia/Kolkata' as end_time,
+        to_char(start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as start_time,
+        to_char(end_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as end_time,
         duration_minutes, momentum_score, aura_score
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         AND date >= %s ORDER BY start_time DESC

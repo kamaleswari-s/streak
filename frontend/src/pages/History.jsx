@@ -36,27 +36,21 @@ export default function History() {
   }
 
   const formatTime = (ts) => {
-    if (!ts) return '--'
-    try {
-      let timeStr = ''
-      if (typeof ts === 'string' && ts.includes('T')) {
-        timeStr = ts.split('T')[1]
-      } else if (typeof ts === 'string' && ts.includes(' ')) {
-        timeStr = ts.split(' ')[1]
-      } else {
-        return '--'
-      }
-      const [hourStr, minStr] = timeStr.substring(0, 5).split(':')
-      const hour = parseInt(hourStr)
-      if (isNaN(hour)) return '--'
-      const min = minStr || '00'
-      const ampm = hour >= 12 ? 'PM' : 'AM'
-      const displayHour = hour % 12 === 0 ? 12 : hour % 12
-      return `${String(displayHour).padStart(2, '0')}:${min} ${ampm}`
-    } catch {
-      return '--'
-    }
+  if (!ts) return '--'
+  try {
+    // format is now "2026-07-24T18:28:00" — pure IST no timezone label
+    const timePart = ts.includes('T') ? ts.split('T')[1] : ts.split(' ')[1]
+    if (!timePart) return '--'
+    const [hourStr, minStr] = timePart.split(':')
+    const hour = parseInt(hourStr)
+    if (isNaN(hour)) return '--'
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12
+    return `${String(displayHour).padStart(2, '0')}:${String(minStr).padStart(2, '0')} ${ampm}`
+  } catch {
+    return '--'
   }
+}
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '--'
