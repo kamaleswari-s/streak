@@ -2,6 +2,11 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext()
 
+// Public pages use Majorelle — warm, inviting
+// App pages use Neon Noir — dark, focused, serious
+const PUBLIC_THEME = 'majorelle'
+const APP_THEME = 'neon_noir'
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(localStorage.getItem('streak_token'))
@@ -11,20 +16,27 @@ export function AuthProvider({ children }) {
     const savedUser = localStorage.getItem('streak_user')
     const savedToken = localStorage.getItem('streak_token')
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser))
-      setToken(savedToken)
       const parsed = JSON.parse(savedUser)
-      document.documentElement.setAttribute('data-theme', parsed.theme || 'majorelle')
+      setUser(parsed)
+      setToken(savedToken)
+      // user is logged in — apply their saved theme or app default
+      document.documentElement.setAttribute('data-theme', parsed.theme || APP_THEME)
+    } else {
+      // no user — apply public theme
+      document.documentElement.setAttribute('data-theme', PUBLIC_THEME)
     }
     setLoading(false)
   }, [])
 
   const login = (userData, authToken) => {
-    setUser(userData)
+    // on login — immediately switch to app theme
+    const appTheme = userData.theme || APP_THEME
+    const updated = { ...userData, theme: appTheme }
+    setUser(updated)
     setToken(authToken)
-    localStorage.setItem('streak_user', JSON.stringify(userData))
+    localStorage.setItem('streak_user', JSON.stringify(updated))
     localStorage.setItem('streak_token', authToken)
-    document.documentElement.setAttribute('data-theme', userData.theme || 'majorelle')
+    document.documentElement.setAttribute('data-theme', appTheme)
   }
 
   const logout = () => {
@@ -32,7 +44,8 @@ export function AuthProvider({ children }) {
     setToken(null)
     localStorage.removeItem('streak_user')
     localStorage.removeItem('streak_token')
-    document.documentElement.removeAttribute('data-theme')
+    // back to public theme on logout
+    document.documentElement.setAttribute('data-theme', PUBLIC_THEME)
   }
 
   const updateTheme = (theme) => {

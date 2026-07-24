@@ -1,6 +1,9 @@
 @import '@fontsource/pixelify-sans';
 @import '@fontsource/plus-jakarta-sans';
 @import '@fontsource/pacifico';
+html {
+  font-size: 14px;
+}
 
 /* ── DEFAULT — MAJORELLE ─────────────────────────────── */
 :root {
