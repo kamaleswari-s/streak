@@ -37,18 +37,29 @@ export default function History() {
 
   const formatTime = (ts) => {
     if (!ts) return '--'
-    // backend already sends IST — read directly from string, no conversion
-    const parts = ts.split('T')
-    if (parts.length < 2) return '--'
-    const timePart = parts[1].substring(0, 5)
-    const [hourStr, minStr] = timePart.split(':')
-    const hour = parseInt(hourStr)
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 === 0 ? 12 : hour % 12
-    return `${String(displayHour).padStart(2, '0')}:${minStr} ${ampm}`
+    try {
+      let timeStr = ''
+      if (typeof ts === 'string' && ts.includes('T')) {
+        timeStr = ts.split('T')[1]
+      } else if (typeof ts === 'string' && ts.includes(' ')) {
+        timeStr = ts.split(' ')[1]
+      } else {
+        return '--'
+      }
+      const [hourStr, minStr] = timeStr.substring(0, 5).split(':')
+      const hour = parseInt(hourStr)
+      if (isNaN(hour)) return '--'
+      const min = minStr || '00'
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const displayHour = hour % 12 === 0 ? 12 : hour % 12
+      return `${String(displayHour).padStart(2, '0')}:${min} ${ampm}`
+    } catch {
+      return '--'
+    }
   }
 
   const formatDate = (dateStr) => {
+    if (!dateStr) return '--'
     const [y, m, d] = dateStr.split('-')
     const date = new Date(+y, +m - 1, +d)
     return date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -69,10 +80,16 @@ export default function History() {
       <Navbar />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '900px', margin: '0 auto' }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: '36px', color: 'var(--primary)', marginBottom: '0.5rem' }}>
+          <h1 style={{
+            fontFamily: 'var(--font-pixel)', fontSize: '36px',
+            color: 'var(--primary)', marginBottom: '0.5rem'
+          }}>
             session history
           </h1>
-          <p style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '2rem', opacity: 0.8 }}>
+          <p style={{
+            fontSize: '16px', color: 'var(--text-primary)',
+            marginBottom: '2rem', opacity: 0.85, fontWeight: '500'
+          }}>
             every minute of effort, logged.
           </p>
 
@@ -81,8 +98,8 @@ export default function History() {
               <button key={f} onClick={() => setFilter(f)}
                 style={{
                   padding: '8px 20px', borderRadius: '20px', cursor: 'pointer',
-                  border: '2px solid var(--border)', fontSize: '14px', fontWeight: '600',
-                  background: filter === f ? 'var(--primary)' : 'transparent',
+                  border: '2px solid var(--border)', fontSize: '14px', fontWeight: '700',
+                  background: filter === f ? 'var(--primary)' : 'var(--surface)',
                   color: filter === f ? 'white' : 'var(--text-primary)',
                   fontFamily: 'var(--font-body)', transition: 'all 0.2s'
                 }}>
@@ -92,7 +109,10 @@ export default function History() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '4rem', fontFamily: 'var(--font-pixel)', color: 'var(--primary)' }}>
+            <div style={{
+              textAlign: 'center', padding: '4rem',
+              fontFamily: 'var(--font-pixel)', color: 'var(--primary)'
+            }}>
               loading...
             </div>
           ) : sessions.length === 0 ? (
@@ -100,10 +120,13 @@ export default function History() {
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
                 <SeatIcon />
               </div>
-              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '20px', color: 'var(--primary)', marginBottom: '8px' }}>
+              <div style={{
+                fontFamily: 'var(--font-pixel)', fontSize: '20px',
+                color: 'var(--primary)', marginBottom: '8px'
+              }}>
                 no sessions yet
               </div>
-              <div style={{ fontSize: '15px', color: 'var(--text-primary)', opacity: 0.7 }}>
+              <div style={{ fontSize: '15px', color: 'var(--text-primary)', opacity: 0.75, fontWeight: '500' }}>
                 start a session from the dashboard
               </div>
             </div>
@@ -113,7 +136,7 @@ export default function History() {
                 <motion.div key={s.id} className="glass"
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  whileHover={{ y: -2 }}
+                  whileHover={{ y: -3 }}
                   style={{
                     padding: '1.25rem 1.5rem',
                     display: 'flex', alignItems: 'center',
@@ -128,24 +151,25 @@ export default function History() {
                       {formatDate(s.date)}
                     </div>
                     <div style={{
-                      fontSize: '14px', color: 'var(--text-primary)',
-                      opacity: 0.8, fontWeight: '500'
+                      fontSize: '15px', color: 'var(--text-primary)',
+                      opacity: 0.85, fontWeight: '600'
                     }}>
                       {formatTime(s.start_time)} — {formatTime(s.end_time)}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{
                         fontFamily: 'var(--font-pixel)', fontSize: '22px',
-                        color: 'var(--primary)', fontWeight: '700'
+                        color: 'var(--primary)', fontWeight: '700', lineHeight: 1
                       }}>
                         {formatDuration(s.duration_minutes)}
                       </div>
                       <div style={{
                         fontSize: '11px', color: 'var(--text-primary)',
-                        opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px'
+                        opacity: 0.65, fontWeight: '700',
+                        letterSpacing: '1px', marginTop: '4px'
                       }}>
                         DURATION
                       </div>
@@ -153,13 +177,14 @@ export default function History() {
                     <div style={{ textAlign: 'center' }}>
                       <div style={{
                         fontFamily: 'var(--font-pixel)', fontSize: '22px',
-                        color: 'var(--primary)', fontWeight: '700'
+                        color: 'var(--primary)', fontWeight: '700', lineHeight: 1
                       }}>
                         {Math.round(s.momentum_score)}
                       </div>
                       <div style={{
                         fontSize: '11px', color: 'var(--text-primary)',
-                        opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px'
+                        opacity: 0.65, fontWeight: '700',
+                        letterSpacing: '1px', marginTop: '4px'
                       }}>
                         MOMENTUM
                       </div>
@@ -167,13 +192,14 @@ export default function History() {
                     <div style={{ textAlign: 'center' }}>
                       <div style={{
                         fontFamily: 'var(--font-pixel)', fontSize: '22px',
-                        color: 'var(--accent-dark)', fontWeight: '700'
+                        color: 'var(--accent-dark)', fontWeight: '700', lineHeight: 1
                       }}>
                         {Math.round(s.aura_score)}
                       </div>
                       <div style={{
                         fontSize: '11px', color: 'var(--text-primary)',
-                        opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px'
+                        opacity: 0.65, fontWeight: '700',
+                        letterSpacing: '1px', marginTop: '4px'
                       }}>
                         AURA
                       </div>

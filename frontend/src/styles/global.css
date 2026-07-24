@@ -1,9 +1,6 @@
 @import '@fontsource/pixelify-sans';
 @import '@fontsource/plus-jakarta-sans';
 @import '@fontsource/pacifico';
-html {
-  font-size: 14px;
-}
 
 /* ── DEFAULT — MAJORELLE ─────────────────────────────── */
 :root {
@@ -15,9 +12,9 @@ html {
   --accent: #FF7247;
   --accent-dark: #cc4a22;
   --text-primary: #1a1a4a;
-  --text-secondary: #3a3a7a;
+  --text-secondary: #2a2a6a;
   --text-muted: #6060D2;
-  --border: rgba(96, 96, 210, 0.15);
+  --border: rgba(96, 96, 210, 0.35);
   --font-pixel: 'Pixelify Sans', monospace;
   --font-body: 'Plus Jakarta Sans', sans-serif;
   --font-logo: 'Pacifico', cursive;
@@ -37,10 +34,10 @@ html {
   --primary-light: #F8B6BF;
   --accent: #95D5D1;
   --accent-dark: #0a7a74;
-  --text-primary: #3D0E20;
-  --text-secondary: #6B1A3A;
+  --text-primary: #2D0A16;
+  --text-secondary: #5B1030;
   --text-muted: #BF1E62;
-  --border: rgba(191, 30, 98, 0.12);
+  --border: rgba(191, 30, 98, 0.35);
 }
 
 [data-theme="majorelle"] {
@@ -52,9 +49,9 @@ html {
   --accent: #FF7247;
   --accent-dark: #cc4a22;
   --text-primary: #1a1a4a;
-  --text-secondary: #3a3a7a;
+  --text-secondary: #2a2a6a;
   --text-muted: #6060D2;
-  --border: rgba(96, 96, 210, 0.15);
+  --border: rgba(96, 96, 210, 0.35);
 }
 
 [data-theme="olive_garden"] {
@@ -65,10 +62,10 @@ html {
   --primary-light: #C6A100;
   --accent: #828600;
   --accent-dark: #463500;
-  --text-primary: #2a1f00;
-  --text-secondary: #463500;
+  --text-primary: #1a0f00;
+  --text-secondary: #2e2000;
   --text-muted: #828600;
-  --border: rgba(70, 53, 0, 0.15);
+  --border: rgba(70, 53, 0, 0.35);
 }
 
 [data-theme="matcha_latte"] {
@@ -79,10 +76,10 @@ html {
   --primary-light: #D4E8C2;
   --accent: #8B6914;
   --accent-dark: #5a4200;
-  --text-primary: #1A2A18;
-  --text-secondary: #3A5A38;
+  --text-primary: #0F1F0D;
+  --text-secondary: #253D22;
   --text-muted: #4A6741;
-  --border: rgba(74, 103, 65, 0.15);
+  --border: rgba(74, 103, 65, 0.35);
 }
 
 [data-theme="desert_sun"] {
@@ -93,10 +90,10 @@ html {
   --primary-light: #E8934A;
   --accent: #6B8E4E;
   --accent-dark: #3a5a20;
-  --text-primary: #3A1500;
-  --text-secondary: #7A3A00;
+  --text-primary: #2A0E00;
+  --text-secondary: #5A2A00;
   --text-muted: #C4570A;
-  --border: rgba(196, 87, 10, 0.15);
+  --border: rgba(196, 87, 10, 0.35);
 }
 
 [data-theme="mint_chip"] {
@@ -107,10 +104,10 @@ html {
   --primary-light: #B8F0D0;
   --accent: #5D3A1A;
   --accent-dark: #3a1f00;
-  --text-primary: #0A2A1A;
-  --text-secondary: #1A5A30;
+  --text-primary: #051A0F;
+  --text-secondary: #0F3A22;
   --text-muted: #1A7A4A;
-  --border: rgba(26, 122, 74, 0.15);
+  --border: rgba(26, 122, 74, 0.35);
 }
 
 [data-theme="lavender_haze"] {
@@ -121,10 +118,10 @@ html {
   --primary-light: #C4A0FF;
   --accent: #FFD700;
   --accent-dark: #b89600;
-  --text-primary: #2A0A5A;
-  --text-secondary: #5A3A8A;
+  --text-primary: #1A0540;
+  --text-secondary: #3A1A70;
   --text-muted: #7B4FD4;
-  --border: rgba(123, 79, 212, 0.15);
+  --border: rgba(123, 79, 212, 0.35);
 }
 
 [data-theme="cloud_nine"] {
@@ -135,10 +132,10 @@ html {
   --primary-light: #6AABFF;
   --accent: #FFE44A;
   --accent-dark: #c4aa00;
-  --text-primary: #0A1A3A;
-  --text-secondary: #1A3A6A;
+  --text-primary: #05152A;
+  --text-secondary: #0F2A55;
   --text-muted: #2E6FD4;
-  --border: rgba(46, 111, 212, 0.15);
+  --border: rgba(46, 111, 212, 0.35);
 }
 
 [data-theme="ocean_breeze"] {
@@ -149,10 +146,10 @@ html {
   --primary-light: #B2EEE8;
   --accent: #FF6B6B;
   --accent-dark: #cc2222;
-  --text-primary: #00252A;
-  --text-secondary: #005A6A;
+  --text-primary: #001518;
+  --text-secondary: #003540;
   --text-muted: #007A8A;
-  --border: rgba(0, 122, 138, 0.15);
+  --border: rgba(0, 122, 138, 0.35);
 }
 
 /* ── DARK THEMES ─────────────────────────────────────────── */
@@ -166,9 +163,9 @@ html {
   --accent: #C9A0A0;
   --accent-dark: #E8E0F0;
   --text-primary: #E8E0F0;
-  --text-secondary: #C9A0A0;
+  --text-secondary: #C0B0D8;
   --text-muted: #50C878;
-  --border: rgba(80, 200, 120, 0.15);
+  --border: rgba(80, 200, 120, 0.25);
 }
 
 [data-theme="forest"] {
@@ -180,9 +177,9 @@ html {
   --accent: #8B5E3C;
   --accent-dark: #E8D5B0;
   --text-primary: #E8D5B0;
-  --text-secondary: #C8B890;
+  --text-secondary: #D0C090;
   --text-muted: #7FB069;
-  --border: rgba(127, 176, 105, 0.2);
+  --border: rgba(127, 176, 105, 0.3);
 }
 
 [data-theme="mocha"] {
@@ -194,9 +191,9 @@ html {
   --accent: #D4A843;
   --accent-dark: #E8D5C0;
   --text-primary: #E8D5C0;
-  --text-secondary: #C8B5A0;
+  --text-secondary: #D0BDA8;
   --text-muted: #C8956C;
-  --border: rgba(200, 149, 108, 0.2);
+  --border: rgba(200, 149, 108, 0.3);
 }
 
 [data-theme="neon_noir"] {
@@ -208,9 +205,9 @@ html {
   --accent: #FF2D78;
   --accent-dark: #F0E6FF;
   --text-primary: #F0E6FF;
-  --text-secondary: #C0A8E0;
+  --text-secondary: #D0B8F0;
   --text-muted: #B44FFF;
-  --border: rgba(180, 79, 255, 0.2);
+  --border: rgba(180, 79, 255, 0.3);
 }
 
 [data-theme="cyber_gold"] {
@@ -222,9 +219,9 @@ html {
   --accent: #FF8C00;
   --accent-dark: #FFF8DC;
   --text-primary: #FFF8DC;
-  --text-secondary: #E0D090;
+  --text-secondary: #F0E090;
   --text-muted: #FFD700;
-  --border: rgba(255, 215, 0, 0.2);
+  --border: rgba(255, 215, 0, 0.3);
 }
 
 [data-theme="blood_orange"] {
@@ -236,9 +233,9 @@ html {
   --accent: #FF7043;
   --accent-dark: #FFE4D6;
   --text-primary: #FFE4D6;
-  --text-secondary: #E0B8A0;
+  --text-secondary: #F0C8B0;
   --text-muted: #FF4500;
-  --border: rgba(255, 69, 0, 0.2);
+  --border: rgba(255, 69, 0, 0.3);
 }
 
 [data-theme="arctic"] {
@@ -250,9 +247,9 @@ html {
   --accent: #0066CC;
   --accent-dark: #E0F4FF;
   --text-primary: #E0F4FF;
-  --text-secondary: #A0C8E0;
+  --text-secondary: #B8D8F0;
   --text-muted: #00D4FF;
-  --border: rgba(0, 212, 255, 0.15);
+  --border: rgba(0, 212, 255, 0.25);
 }
 
 [data-theme="obsidian"] {
@@ -264,9 +261,9 @@ html {
   --accent: #888888;
   --accent-dark: #ffffff;
   --text-primary: #ffffff;
-  --text-secondary: #AAAAAA;
+  --text-secondary: #CCCCCC;
   --text-muted: #888888;
-  --border: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.18);
 }
 
 [data-theme="galaxy"] {
@@ -278,21 +275,22 @@ html {
   --accent: #FF6B9D;
   --accent-dark: #E8E4FF;
   --text-primary: #E8E4FF;
-  --text-secondary: #C0B8E8;
+  --text-secondary: #C8C0F0;
   --text-muted: #9D8FFF;
-  --border: rgba(157, 143, 255, 0.2);
+  --border: rgba(157, 143, 255, 0.3);
 }
 
 /* ── GLASS VARIANTS ──────────────────────────────────────── */
+
+/* light themes — strong white card with visible border and shadow */
 .glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1.5px solid var(--border);
+  background: #ffffff;
+  border: 2px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.05);
 }
 
+/* dark themes — semi transparent dark card */
 [data-theme="midnight_garden"] .glass,
 [data-theme="forest"] .glass,
 [data-theme="mocha"] .glass,
@@ -302,10 +300,10 @@ html {
 [data-theme="arctic"] .glass,
 [data-theme="obsidian"] .glass,
 [data-theme="galaxy"] .glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 /* ── BASE STYLES ─────────────────────────────────────────── */
@@ -313,6 +311,10 @@ html {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
 }
 
 body {
@@ -330,11 +332,16 @@ h1, h2, h3, h4 {
   line-height: 1.2;
 }
 
-p, span, label, input, button {
+p, span, label, div {
   font-family: var(--font-body);
   color: var(--text-primary);
 }
 
+button {
+  font-family: var(--font-body);
+}
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
 .btn-primary {
   background: var(--primary);
   color: white;
@@ -343,7 +350,7 @@ p, span, label, input, button {
   padding: 12px 24px;
   font-family: var(--font-body);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: opacity 0.2s ease, transform 0.1s ease;
 }
@@ -359,7 +366,7 @@ p, span, label, input, button {
   padding: 12px 24px;
   font-family: var(--font-body);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -369,24 +376,55 @@ p, span, label, input, button {
   color: white;
 }
 
-input, textarea {
+/* ── INPUTS ──────────────────────────────────────────────── */
+input, textarea, select {
   background: var(--surface);
-  border: 1.5px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
   font-family: var(--font-body);
   font-size: 15px;
+  font-weight: 500;
   color: var(--text-primary);
   width: 100%;
   outline: none;
   transition: border-color 0.2s ease;
 }
 
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
   border-color: var(--primary);
 }
 
-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.5;
+input::placeholder, textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ── STREAK BANNER TEXT FIX FOR DARK THEMES ─────────────── */
+[data-theme="midnight_garden"] .streak-badge-text,
+[data-theme="forest"] .streak-badge-text,
+[data-theme="mocha"] .streak-badge-text,
+[data-theme="neon_noir"] .streak-badge-text,
+[data-theme="cyber_gold"] .streak-badge-text,
+[data-theme="blood_orange"] .streak-badge-text,
+[data-theme="arctic"] .streak-badge-text,
+[data-theme="obsidian"] .streak-badge-text,
+[data-theme="galaxy"] .streak-badge-text {
+  color: white !important;
 }

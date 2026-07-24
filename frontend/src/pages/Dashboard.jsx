@@ -331,8 +331,8 @@ function DailyQuoteBanner({ streak }) {
         flexWrap: 'wrap', borderLeft: '4px solid var(--primary)'
       }}>
       <div style={{ flex: 1, minWidth: '200px' }}>
-        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '6px', opacity: 0.55 }}>TODAY'S QUOTE</div>
-        <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic', opacity: 0.9 }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '6px', opacity: 0.6 }}>TODAY'S QUOTE</div>
+        <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic', fontWeight: '500' }}>
           "{quote.text}"
         </div>
         <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: '700', marginTop: '4px' }}>— {quote.author}</div>
@@ -342,8 +342,8 @@ function DailyQuoteBanner({ streak }) {
           textAlign: 'center', padding: '0.75rem 1.5rem',
           background: 'var(--primary)', borderRadius: '12px', flexShrink: 0
         }}>
-          <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '28px', color: 'white', lineHeight: 1 }}>{streak}</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: '600', marginTop: '3px' }}>day streak</div>
+          <div className="streak-badge-text" style={{ fontFamily: 'var(--font-pixel)', fontSize: '28px', color: 'white', lineHeight: 1 }}>{streak}</div>
+          <div className="streak-badge-text" style={{ fontSize: '12px', color: 'white', fontWeight: '700', marginTop: '3px' }}>day streak</div>
         </div>
       )}
     </motion.div>
