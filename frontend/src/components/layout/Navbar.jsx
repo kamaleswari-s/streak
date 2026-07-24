@@ -8,13 +8,14 @@ export default function Navbar() {
   const { logout } = useAuth()
 
   const links = [
-    { label: 'dashboard', path: '/dashboard' },
-    { label: 'history', path: '/history' },
-    { label: 'analytics', path: '/analytics' },
-    { label: 'leaderboard', path: '/leaderboard' },
-    { label: 'device', path: '/device' },
-    { label: 'settings', path: '/settings' },
-  ]
+  { label: 'dashboard', path: '/dashboard' },
+  { label: 'calendar', path: '/calendar' },
+  { label: 'history', path: '/history' },
+  { label: 'analytics', path: '/analytics' },
+  { label: 'leaderboard', path: '/leaderboard' },
+  { label: 'device', path: '/device' },
+  { label: 'settings', path: '/settings' },
+]
 
   return (
     <nav style={{

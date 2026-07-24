@@ -11,10 +11,11 @@ import Analytics from './pages/Analytics'
 import Leaderboard from './pages/Leaderboard'
 import Device from './pages/Device'
 import Settings from './pages/Settings'
+import Calendar from './pages/Calendar'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontFamily:'var(--font-pixel)', color:'var(--primary)', fontSize:'24px' }}>loading strëak...</div>
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'var(--font-pixel)', color: 'var(--primary)', fontSize: '24px' }}>loading strëak...</div>
   if (!user) return <Navigate to="/login" />
   return children
 }
@@ -39,6 +40,7 @@ function AppRoutes() {
       <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
       <Route path="/device" element={<ProtectedRoute><Device /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

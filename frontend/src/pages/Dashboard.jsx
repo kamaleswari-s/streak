@@ -3,89 +3,106 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import io from 'socket.io-client'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import Navbar from '../components/layout/Navbar'
 
 const API = 'http://localhost:5000'
 
+const quotes = [
+  { text: 'small daily improvements are the key to staggering long-term results.', author: 'Robin Sharma' },
+  { text: 'you do not rise to the level of your goals. you fall to the level of your systems.', author: 'James Clear' },
+  { text: 'the secret of getting ahead is getting started.', author: 'Mark Twain' },
+  { text: 'it is not about having time. it is about making time.', author: 'unknown' },
+  { text: 'discipline is choosing between what you want now and what you want most.', author: 'Abraham Lincoln' },
+  { text: 'success is the sum of small efforts repeated day in and day out.', author: 'Robert Collier' },
+  { text: 'do something today that your future self will thank you for.', author: 'Sean Patrick Flanery' },
+  { text: 'the pain of discipline is far less than the pain of regret.', author: 'unknown' },
+  { text: 'focus on progress, not perfection.', author: 'unknown' },
+  { text: 'your future is created by what you do today, not tomorrow.', author: 'Robert Kiyosaki' },
+  { text: 'motivation gets you going, but discipline keeps you growing.', author: 'John C. Maxwell' },
+  { text: 'the harder you work for something, the greater you will feel when you achieve it.', author: 'unknown' },
+]
+
 const tourSlides = [
+  { isLogo: true },
   {
-    icon: null,
-    isLogo: true,
-    title: null,
-    subtitle: null,
-    desc: null,
-  },
-  {
-    icon: '🪑',
+    icon: (
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="38" width="44" height="6" rx="3" fill="var(--primary)"/>
+        <rect x="13" y="44" width="6" height="12" rx="3" fill="var(--primary)"/>
+        <rect x="45" y="44" width="6" height="12" rx="3" fill="var(--primary)"/>
+        <rect x="18" y="24" width="28" height="16" rx="4" fill="var(--primary-light)"/>
+        <circle cx="32" cy="20" r="8" fill="var(--accent)"/>
+        <circle cx="32" cy="10" r="3" fill="var(--accent)" opacity="0.5"/>
+        <circle cx="44" cy="13" r="3" fill="var(--accent)" opacity="0.5"/>
+        <circle cx="20" cy="13" r="3" fill="var(--accent)" opacity="0.5"/>
+      </svg>
+    ),
     title: 'sit down to start.',
     subtitle: 'stand up to stop.',
-    desc: 'that is literally it. no timers to set. no apps to open. strëak detects you automatically.',
+    desc: 'that is literally it. no timers to set. no apps to open. strëak detects you automatically using PIR and IR sensors.',
   },
   {
-    icon: '💡',
-    title: 'your desk glows.',
-    subtitle: 'the more you study, the brighter it gets.',
-    desc: 'a physical LED device on your desk changes colour based on your momentum. amber to purple to green.',
-  },
-  {
-    icon: '✦',
+    icon: (
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="20" stroke="var(--border)" strokeWidth="6" fill="none"/>
+        <circle cx="32" cy="32" r="20" stroke="var(--primary)" strokeWidth="6" fill="none"
+          strokeDasharray="50 76" strokeLinecap="round"
+          style={{ transform: 'rotate(-90deg)', transformOrigin: '32px 32px' }}/>
+        <circle cx="32" cy="32" r="6" fill="var(--accent)"/>
+        <circle cx="32" cy="32" r="2" fill="white"/>
+      </svg>
+    ),
     title: 'your aura grows.',
     subtitle: 'consistency is everything.',
-    desc: 'show up every day, even for 30 minutes, and watch your streak, momentum score, and aura rise.',
+    desc: 'show up every day, even for 30 minutes, and watch your streak, momentum score, and aura rise over time.',
+  },
+  {
+    icon: (
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <rect x="10" y="18" width="10" height="6" rx="2" fill="var(--primary-light)"/>
+        <rect x="10" y="20" width="10" height="24" rx="2" fill="var(--primary-light)"/>
+        <rect x="27" y="14" width="10" height="30" rx="2" fill="var(--primary-light)"/>
+        <rect x="44" y="8" width="10" height="36" rx="2" fill="var(--primary)"/>
+        <polyline points="12,36 30,24 48,12" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" fill="none"/>
+        <circle cx="48" cy="12" r="4" fill="var(--accent)"/>
+      </svg>
+    ),
+    title: 'your desk speaks.',
+    subtitle: '5 LEDs. one glows at a time.',
+    desc: 'white means standby. yellow builds. blue grows. green means flow. red means your phone is on the desk.',
   },
 ]
 
-// ── TOUR ──────────────────────────────────────────────────
 function WelcomeTour({ userName, onDone }) {
   const [slide, setSlide] = useState(0)
-
-  const next = () => {
-    if (slide < tourSlides.length - 1) setSlide(s => s + 1)
-    else onDone()
-  }
-
+  const next = () => slide < tourSlides.length - 1 ? setSlide(s => s + 1) : onDone()
   const current = tourSlides[slide]
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 999,
-        background: 'var(--bg)',
+        position: 'fixed', inset: 0, zIndex: 999, background: 'var(--bg)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         textAlign: 'center', padding: '2rem'
       }}>
-
-      {/* floating particles */}
       {[...Array(10)].map((_, i) => (
         <motion.div key={i}
           animate={{ y: [0, -20, 0], opacity: [0, 0.4, 0] }}
           transition={{ duration: 3 + i * 0.5, repeat: Infinity, delay: i * 0.4 }}
           style={{
-            position: 'absolute',
-            width: '6px', height: '6px', borderRadius: '50%',
+            position: 'absolute', width: '6px', height: '6px', borderRadius: '50%',
             background: i % 2 === 0 ? 'var(--primary)' : 'var(--accent)',
-            left: `${8 + i * 9}%`,
-            top: `${15 + (i % 4) * 18}%`,
-            pointerEvents: 'none'
+            left: `${8 + i * 9}%`, top: `${15 + (i % 4) * 18}%`, pointerEvents: 'none'
           }} />
       ))}
 
-      {/* slide dots */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '3rem' }}>
         {tourSlides.map((_, i) => (
           <motion.div key={i}
-            animate={{
-              width: i === slide ? '28px' : '8px',
-              background: i <= slide ? 'var(--primary)' : 'var(--border)'
-            }}
+            animate={{ width: i === slide ? '28px' : '8px', background: i <= slide ? 'var(--primary)' : 'var(--border)' }}
             style={{ height: '8px', borderRadius: '4px', cursor: 'pointer' }}
-            onClick={() => setSlide(i)}
-          />
+            onClick={() => setSlide(i)} />
         ))}
       </div>
 
@@ -99,74 +116,40 @@ function WelcomeTour({ userName, onDone }) {
 
           {current.isLogo ? (
             <>
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 3, repeat: Infinity }}
+              <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}
                 style={{ marginBottom: '2rem' }}>
                 <svg width="120" height="120" viewBox="0 0 100 100" style={{ display: 'block', margin: '0 auto' }}>
-                  <motion.circle cx="50" cy="8" r="2.5" fill="var(--accent)"
-                    animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
-                  <motion.circle cx="73" cy="15" r="2.5" fill="var(--accent)"
-                    animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.2 }} />
-                  <motion.circle cx="27" cy="15" r="2.5" fill="var(--accent)"
-                    animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.4 }} />
-                  <motion.circle cx="82" cy="38" r="2.5" fill="var(--accent)"
-                    animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.6 }} />
-                  <motion.circle cx="18" cy="38" r="2.5" fill="var(--accent)"
-                    animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }} />
+                  <motion.circle cx="50" cy="8" r="2.5" fill="var(--accent)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
+                  <motion.circle cx="73" cy="15" r="2.5" fill="var(--accent)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.2 }} />
+                  <motion.circle cx="27" cy="15" r="2.5" fill="var(--accent)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.4 }} />
+                  <motion.circle cx="82" cy="38" r="2.5" fill="var(--accent)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.6 }} />
+                  <motion.circle cx="18" cy="38" r="2.5" fill="var(--accent)" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }} />
                   <rect x="20" y="62" width="60" height="7" rx="3.5" fill="var(--primary)" />
                   <rect x="24" y="69" width="6" height="16" rx="3" fill="var(--primary)" />
                   <rect x="70" y="69" width="6" height="16" rx="3" fill="var(--primary)" />
                   <rect x="30" y="44" width="40" height="20" rx="5" fill="var(--primary-light)" />
-                  <motion.circle cx="50" cy="38" r="7" fill="var(--accent)"
-                    animate={{ r: [6, 8, 6] }} transition={{ duration: 1.8, repeat: Infinity }} />
+                  <motion.circle cx="50" cy="38" r="7" fill="var(--accent)" animate={{ r: [6, 8, 6] }} transition={{ duration: 1.8, repeat: Infinity }} />
                   <circle cx="50" cy="38" r="3" fill="white" />
                 </svg>
               </motion.div>
-
-              <div style={{
-                fontFamily: 'var(--font-logo)', fontSize: 'clamp(48px, 10vw, 80px)',
-                color: 'var(--primary)', marginBottom: '1rem', lineHeight: 1
-              }}>strëak</div>
-
-              <div style={{
-                fontFamily: 'var(--font-pixel)', fontSize: '20px',
-                color: 'var(--text-secondary)', marginBottom: '0.75rem'
-              }}>
+              <div style={{ fontFamily: 'var(--font-logo)', fontSize: 'clamp(48px, 10vw, 80px)', color: 'var(--primary)', marginBottom: '1rem', lineHeight: 1 }}>strëak</div>
+              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '0.75rem', opacity: 0.9 }}>
                 welcome, {userName?.split(' ')[0]} ✦
               </div>
-
-              <div style={{
-                fontSize: '16px', color: 'var(--text-secondary)',
-                opacity: 0.65, lineHeight: 1.7
-              }}>
+              <div style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.7, lineHeight: 1.7 }}>
                 your effort is about to become visible.
               </div>
             </>
           ) : (
             <>
-              <div style={{ fontSize: '64px', marginBottom: '1.5rem' }}>{current.icon}</div>
-
-              <div style={{
-                fontFamily: 'var(--font-pixel)',
-                fontSize: 'clamp(24px, 4vw, 38px)',
-                color: 'var(--primary)', marginBottom: '0.5rem', lineHeight: 1.2
-              }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>{current.icon}</div>
+              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 38px)', color: 'var(--primary)', marginBottom: '0.5rem', lineHeight: 1.2 }}>
                 {current.title}
               </div>
-
-              <div style={{
-                fontFamily: 'var(--font-pixel)',
-                fontSize: 'clamp(16px, 2.5vw, 22px)',
-                color: 'var(--accent)', marginBottom: '1.5rem'
-              }}>
+              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(14px, 2vw, 18px)', color: 'var(--accent-dark)', marginBottom: '1.5rem', fontWeight: '600' }}>
                 {current.subtitle}
               </div>
-
-              <div style={{
-                fontSize: '17px', color: 'var(--text-secondary)',
-                lineHeight: 1.8, opacity: 0.8
-              }}>
+              <div style={{ fontSize: '17px', color: 'var(--text-primary)', lineHeight: 1.8, opacity: 0.85 }}>
                 {current.desc}
               </div>
             </>
@@ -175,32 +158,16 @@ function WelcomeTour({ userName, onDone }) {
       </AnimatePresence>
 
       <motion.div style={{ marginTop: '3rem', display: 'flex', gap: '16px', alignItems: 'center' }}>
-        <motion.button
-          className="btn-primary"
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
+        <motion.button className="btn-primary"
+          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
           onClick={next}
-          animate={slide === tourSlides.length - 1 ? {
-            boxShadow: ['0 0 0px var(--primary)', '0 0 30px var(--primary)', '0 0 0px var(--primary)']
-          } : {}}
-          transition={{ duration: 2, repeat: Infinity }}
           style={{ padding: '16px 40px', fontSize: '18px' }}>
-          {slide === 0
-            ? `let's go →`
-            : slide === tourSlides.length - 1
-              ? 'enter strëak ✦'
-              : 'next →'}
+          {slide === 0 ? "let's go →" : slide === tourSlides.length - 1 ? 'enter strëak →' : 'next →'}
         </motion.button>
-
         {slide > 0 && slide < tourSlides.length - 1 && (
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             onClick={onDone}
-            style={{
-              fontSize: '14px', color: 'var(--text-secondary)',
-              opacity: 0.45, cursor: 'pointer'
-            }}>
+            style={{ fontSize: '14px', color: 'var(--text-primary)', opacity: 0.4, cursor: 'pointer' }}>
             skip
           </motion.span>
         )}
@@ -209,209 +176,106 @@ function WelcomeTour({ userName, onDone }) {
   )
 }
 
-// ── COLD START ────────────────────────────────────────────
-function ColdStart({ onStart }) {
+function ColdStart({ onEnter }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1.2 }}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2 }}
       style={{
         minHeight: '80vh', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         textAlign: 'center', padding: '4rem 2rem',
         position: 'relative', overflow: 'hidden'
       }}>
-
       {[...Array(8)].map((_, i) => (
         <motion.div key={i}
           animate={{ y: [0, -24, 0], opacity: [0, 0.35, 0], x: [0, (i % 2 === 0 ? 12 : -12), 0] }}
           transition={{ duration: 4 + i * 0.6, repeat: Infinity, delay: i * 0.6 }}
           style={{
             position: 'absolute',
-            width: i % 3 === 0 ? '10px' : '6px',
-            height: i % 3 === 0 ? '10px' : '6px',
+            width: i % 3 === 0 ? '10px' : '6px', height: i % 3 === 0 ? '10px' : '6px',
             borderRadius: '50%',
             background: i % 2 === 0 ? 'var(--primary)' : 'var(--accent)',
-            left: `${10 + i * 10}%`,
-            top: `${20 + (i % 4) * 18}%`,
-            pointerEvents: 'none'
+            left: `${10 + i * 10}%`, top: `${20 + (i % 4) * 18}%`, pointerEvents: 'none'
           }} />
       ))}
 
-      <motion.div
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+      <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         style={{ marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
         <svg width="180" height="180" viewBox="0 0 100 100">
-          <motion.circle cx="50" cy="8" r="2.5"
-            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
-            transition={{ duration: 3, repeat: Infinity }} />
-          <motion.circle cx="73" cy="15" r="2.5"
-            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
-            transition={{ duration: 3, repeat: Infinity, delay: 0.5 }} />
-          <motion.circle cx="27" cy="15" r="2.5"
-            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
-            transition={{ duration: 3, repeat: Infinity, delay: 1 }} />
-          <motion.circle cx="82" cy="38" r="2.5"
-            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
-            transition={{ duration: 3, repeat: Infinity, delay: 1.5 }} />
-          <motion.circle cx="18" cy="38" r="2.5"
-            animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }}
-            transition={{ duration: 3, repeat: Infinity, delay: 2 }} />
+          <motion.circle cx="50" cy="8" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity }} />
+          <motion.circle cx="73" cy="15" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 0.5 }} />
+          <motion.circle cx="27" cy="15" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 1 }} />
+          <motion.circle cx="82" cy="38" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 1.5 }} />
+          <motion.circle cx="18" cy="38" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 2 }} />
           <rect x="20" y="62" width="60" height="7" rx="3.5" fill="var(--primary)" opacity="0.2" />
           <rect x="24" y="69" width="6" height="16" rx="3" fill="var(--primary)" opacity="0.2" />
           <rect x="70" y="69" width="6" height="16" rx="3" fill="var(--primary)" opacity="0.2" />
           <rect x="30" y="44" width="40" height="20" rx="5" fill="var(--primary-light)" opacity="0.2" />
           <rect x="34" y="48" width="32" height="12" rx="3" fill="white" opacity="0.15" />
-          <motion.circle cx="50" cy="38" r="6" fill="var(--border)"
-            animate={{ opacity: [0.2, 0.5, 0.2], r: [5, 7, 5] }}
-            transition={{ duration: 3, repeat: Infinity }} />
+          <motion.circle cx="50" cy="38" r="6" fill="var(--border)" animate={{ opacity: [0.2, 0.5, 0.2], r: [5, 7, 5] }} transition={{ duration: 3, repeat: Infinity }} />
           <circle cx="50" cy="38" r="2.5" fill="white" opacity="0.3" />
         </svg>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.9 }}
-        style={{
-          fontFamily: 'var(--font-pixel)',
-          fontSize: 'clamp(28px, 5vw, 52px)',
-          color: 'var(--primary)', marginBottom: '1.2rem',
-          lineHeight: 1.2, position: 'relative', zIndex: 1
-        }}>
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.9 }}
+        style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(28px, 5vw, 52px)', color: 'var(--primary)', marginBottom: '1.2rem', lineHeight: 1.2, position: 'relative', zIndex: 1 }}>
         your desk is quiet.
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 0.8 }}
-        style={{
-          fontSize: '18px', color: 'var(--text-secondary)',
-          lineHeight: 1.8, maxWidth: '480px', marginBottom: '0.75rem',
-          position: 'relative', zIndex: 1
-        }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, duration: 0.8 }}
+        style={{ fontSize: '18px', color: 'var(--text-primary)', lineHeight: 1.8, maxWidth: '480px', marginBottom: '0.75rem', position: 'relative', zIndex: 1, opacity: 0.85 }}>
         you already study hard. you just have nothing to show for it.
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.4, duration: 0.8 }}
-        style={{
-          fontSize: '16px', color: 'var(--text-secondary)',
-          opacity: 0.55, marginBottom: '3rem',
-          position: 'relative', zIndex: 1
-        }}>
-        sit down and change that.
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4, duration: 0.8 }}
+        style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.5, marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
+        explore your dashboard, set up a session, and start your streak.
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 1.8, duration: 0.6, type: 'spring', stiffness: 200 }}
         style={{ position: 'relative', zIndex: 1 }}>
-        <motion.button
-          className="btn-primary"
-          animate={{
-            boxShadow: ['0 0 0px var(--primary)', '0 0 40px var(--primary)', '0 0 0px var(--primary)']
-          }}
+        <motion.button className="btn-primary"
+          animate={{ boxShadow: ['0 0 0px var(--primary)', '0 0 40px var(--primary)', '0 0 0px var(--primary)'] }}
           transition={{ duration: 2.5, repeat: Infinity }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={onStart}
+          whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.96 }}
+          onClick={onEnter}
           style={{ padding: '20px 52px', fontSize: '20px', letterSpacing: '1px' }}>
-          sit down ✦
+          enter dashboard →
         </motion.button>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2.4, duration: 1 }}
-        style={{
-          marginTop: '2rem', fontSize: '14px',
-          color: 'var(--text-secondary)', opacity: 0.35,
-          position: 'relative', zIndex: 1
-        }}>
-        your first session starts everything
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4, duration: 1 }}
+        style={{ marginTop: '2rem', fontSize: '14px', color: 'var(--text-primary)', opacity: 0.3, position: 'relative', zIndex: 1 }}>
+        your journey starts when you are ready
       </motion.div>
     </motion.div>
   )
 }
 
-// ── STREAK DNA ────────────────────────────────────────────
-function StreakDNA({ dates, streak }) {
-  const bars = 42
-  const segments = []
-  for (let i = 0; i < bars; i++) {
-    const dateIndex = dates.length - bars + i
-    const hasSession = dateIndex >= 0 && dates[dateIndex] !== undefined
-    const height = hasSession
-      ? 30 + Math.abs(Math.sin(i * 0.8 + streak * 0.3)) * 60
-      : 6 + Math.abs(Math.sin(i * 1.2)) * 10
-    const opacity = hasSession
-      ? 0.5 + Math.abs(Math.sin(i * 0.5)) * 0.5
-      : 0.12
-    segments.push({ hasSession, height, opacity })
-  }
-
-  return (
-    <motion.div className="glass" style={{ padding: '1.5rem' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '0.5rem', opacity: 0.7 }}>STREAK DNA</div>
-      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.45, marginBottom: '1rem' }}>
-        your unique study fingerprint
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '80px', overflow: 'hidden' }}>
-        {segments.map((seg, i) => (
-          <motion.div key={i}
-            initial={{ scaleY: 0, opacity: 0 }}
-            animate={{ scaleY: 1, opacity: seg.opacity }}
-            transition={{ delay: i * 0.015, duration: 0.4, ease: 'easeOut' }}
-            style={{
-              flex: 1, height: `${seg.height}%`,
-              background: seg.hasSession ? 'var(--primary)' : 'var(--border)',
-              borderRadius: '3px', transformOrigin: 'bottom'
-            }} />
-        ))}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.4 }}>
-        <span>42 days ago</span>
-        <span>{dates.length} sessions logged</span>
-        <span>today</span>
-      </div>
-    </motion.div>
-  )
-}
-
-// ── STAT CARD ─────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }) {
   return (
     <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: accent ? 'var(--accent-dark)' : 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>{label}</div>
+      <div style={{ fontSize: '11px', fontWeight: '700', color: accent ? 'var(--accent-dark)' : 'var(--text-primary)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '42px', color: accent ? 'var(--accent-dark)' : 'var(--primary)', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px', opacity: 0.6 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.65 }}>{sub}</div>}
     </motion.div>
   )
 }
 
-// ── LED DEVICE ────────────────────────────────────────────
 function LEDDevice({ score, sessionActive }) {
   const getLEDColor = () => {
-    if (!sessionActive && score === 0) return { color: '#555', glow: '#555', label: 'dim', desc: 'no session today' }
-    if (!sessionActive) return { color: '#888', glow: '#888', label: 'dim', desc: 'session ended' }
-    if (score < 30) return { color: '#EF9F27', glow: '#EF9F27', label: 'amber', desc: 'building momentum' }
-    if (score < 60) return { color: '#B5D4F4', glow: '#B5D4F4', label: 'cool white', desc: 'momentum growing' }
-    if (score < 80) return { color: '#7F77DD', glow: '#7F77DD', label: 'deep purple', desc: 'full flow state' }
-    return { color: '#639922', glow: '#639922', label: 'pulse green', desc: 'milestone hit' }
+    if (!sessionActive) return { color: '#ffffff', border: '#888', label: 'white', desc: 'standby — no active session' }
+    if (score < 30) return { color: '#EF9F27', label: 'yellow', desc: 'building — under 30 mins' }
+    if (score < 60) return { color: '#4A90D9', label: 'blue', desc: 'momentum growing — 30 to 60 mins' }
+    if (score < 80) return { color: '#639922', label: 'green', desc: 'full flow state — 60+ mins' }
+    return { color: '#639922', label: 'green', desc: 'milestone hit' }
   }
   const led = getLEDColor()
 
   return (
     <motion.div className="glass" style={{ padding: '2rem', textAlign: 'center' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>DEVICE STATE</div>
+      <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>DEVICE STATE</div>
       <motion.svg width="120" height="120" viewBox="0 0 100 100"
         animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity }}
         style={{ display: 'block', margin: '0 auto 1rem' }}>
@@ -428,13 +292,12 @@ function LEDDevice({ score, sessionActive }) {
         <motion.circle cx="50" cy="38" r="7" animate={{ fill: led.color, r: sessionActive ? [6, 9, 6] : 6 }} transition={{ duration: 1.8, repeat: Infinity }} />
         <circle cx="50" cy="38" r="3" fill="white" />
       </motion.svg>
-      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'var(--primary)', marginBottom: '4px' }}>{led.label}</div>
-      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', opacity: 0.7 }}>{led.desc}</div>
+      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'var(--primary)', marginBottom: '4px', fontWeight: '700' }}>{led.label}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-primary)', opacity: 0.75 }}>{led.desc}</div>
     </motion.div>
   )
 }
 
-// ── AURA RING ─────────────────────────────────────────────
 function AuraRing({ score }) {
   const radius = 54
   const circumference = 2 * Math.PI * radius
@@ -442,7 +305,7 @@ function AuraRing({ score }) {
 
   return (
     <motion.div className="glass" style={{ padding: '2rem', textAlign: 'center' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>AURA SCORE</div>
+      <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>AURA SCORE</div>
       <div style={{ position: 'relative', display: 'inline-block' }}>
         <svg width="140" height="140" viewBox="0 0 140 140">
           <circle cx="70" cy="70" r={radius} fill="none" stroke="var(--border)" strokeWidth="10" />
@@ -456,10 +319,10 @@ function AuraRing({ score }) {
         </svg>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
           <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '32px', color: 'var(--primary)', lineHeight: 1 }}>{Math.round(score)}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.6 }}>/ 100</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.6 }}>/ 100</div>
         </div>
       </div>
-      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '1rem', opacity: 0.7 }}>
+      <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '1rem', opacity: 0.75 }}>
         {score < 30 && 'keep going, aura is building'}
         {score >= 30 && score < 60 && 'solid momentum, stay consistent'}
         {score >= 60 && score < 80 && 'strong aura, you are on a roll'}
@@ -469,52 +332,133 @@ function AuraRing({ score }) {
   )
 }
 
-// ── STREAK CALENDAR ───────────────────────────────────────
-function StreakCalendar({ dates }) {
-  const today = new Date()
-  const days = []
-  for (let i = 27; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    const iso = d.toISOString().split('T')[0]
-    days.push({ iso, isToday: i === 0, hasSession: dates.includes(iso) })
-  }
-
+function DailyQuote() {
+  const quote = quotes[new Date().getDate() % quotes.length]
   return (
-    <motion.div className="glass" style={{ padding: '1.5rem' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1rem', opacity: 0.7 }}>28-DAY STREAK CALENDAR</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-        {days.map((day, i) => (
-          <motion.div key={day.iso}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.02 }}
-            title={day.iso}
-            style={{
-              aspectRatio: '1', borderRadius: '6px',
-              background: day.isToday ? 'var(--primary)' : day.hasSession ? 'var(--primary-light)' : 'rgba(255,255,255,0.05)',
-              border: day.isToday ? '2px solid var(--primary)' : 'none'
-            }} />
-        ))}
+    <motion.div className="glass"
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      style={{ padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
+      <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '0.75rem', opacity: 0.6 }}>TODAY'S QUOTE</div>
+      <div style={{ fontSize: '16px', color: 'var(--text-primary)', lineHeight: 1.7, fontStyle: 'italic', marginBottom: '0.5rem', opacity: 0.9 }}>
+        "{quote.text}"
       </div>
-      <div style={{ display: 'flex', gap: '16px', marginTop: '1rem', fontSize: '12px', color: 'var(--text-secondary)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)' }} /> no session
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--primary-light)' }} /> studied
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'var(--primary)' }} /> today
-        </div>
-      </div>
+      <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: '700' }}>— {quote.author}</div>
     </motion.div>
   )
 }
 
-// ── MAIN DASHBOARD ────────────────────────────────────────
+function StreakBanner({ streak }) {
+  if (!streak || streak === 0) return null
+  const getMessage = () => {
+    if (streak === 1) return 'streak started. show up tomorrow.'
+    if (streak < 7) return `${streak} days in. the habit is forming.`
+    if (streak < 14) return `${streak} days. one full week done. keep going.`
+    if (streak < 30) return `${streak} days. you are building something real.`
+    if (streak < 60) return `${streak} days. one month of showing up. respect.`
+    return `${streak} days. this is who you are now.`
+  }
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+      style={{
+        padding: '1.25rem 1.75rem',
+        background: 'var(--primary)',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: '1.5rem', flexWrap: 'wrap', gap: '12px'
+      }}>
+      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'white', fontWeight: '700' }}>
+        {streak} day streak
+      </div>
+      <div style={{ fontSize: '15px', color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>
+        {getMessage()}
+      </div>
+      <motion.div
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'white', flexShrink: 0 }} />
+    </motion.div>
+  )
+}
+
+function UpcomingSessions({ navigate }) {
+  const [events, setEvents] = useState([])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('streak_calendar_events')
+    if (saved) {
+      const all = JSON.parse(saved)
+      const today = new Date().toISOString().split('T')[0]
+      const upcoming = all
+        .filter(e => e.date >= today && !e.completed)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 3)
+      setEvents(upcoming)
+    }
+  }, [])
+
+  return (
+    <motion.div className="glass" style={{ padding: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', opacity: 0.7 }}>UPCOMING SESSIONS</div>
+        <motion.button whileHover={{ scale: 1.05 }} onClick={() => navigate('/calendar')}
+          style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700', fontFamily: 'var(--font-body)' }}>
+          view all →
+        </motion.button>
+      </div>
+
+      {events.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-primary)', opacity: 0.6, marginBottom: '8px' }}>no upcoming sessions planned</div>
+          <motion.button whileHover={{ scale: 1.03 }} onClick={() => navigate('/calendar')}
+            style={{
+              fontSize: '13px', color: 'var(--primary)', background: 'rgba(96,96,210,0.08)',
+              border: '1.5px solid var(--primary)', borderRadius: '10px',
+              cursor: 'pointer', padding: '8px 16px', fontFamily: 'var(--font-body)', fontWeight: '600'
+            }}>
+            plan a session
+          </motion.button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {events.map((event, i) => {
+            const date = new Date(event.date)
+            const isToday = event.date === new Date().toISOString().split('T')[0]
+            const isTomorrow = event.date === new Date(Date.now() + 86400000).toISOString().split('T')[0]
+            const label = isToday ? 'today' : isTomorrow ? 'tomorrow' : date.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })
+            return (
+              <motion.div key={event.id}
+                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 14px', borderRadius: '10px',
+                  background: isToday ? 'rgba(96,96,210,0.08)' : 'var(--surface)',
+                  border: isToday ? '1.5px solid var(--primary)' : '1.5px solid var(--border)'
+                }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '14px', color: 'var(--primary)', marginBottom: '2px' }}>{event.title}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.6 }}>
+                    {label}{event.time ? ` · ${event.time}` : ''}
+                    {event.duration ? ` · ${event.duration}` : ''}
+                  </div>
+                </div>
+                {isToday && (
+                  <div style={{ fontSize: '11px', background: 'var(--primary)', color: 'white', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
+                    today
+                  </div>
+                )}
+              </motion.div>
+            )
+          })}
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
 export default function Dashboard() {
-  const { user, token, logout, updateTheme } = useAuth()
+  const { user, token, logout } = useAuth()
   const [data, setData] = useState(null)
   const [sessionActive, setSessionActive] = useState(false)
   const [sessionStart, setSessionStart] = useState(null)
@@ -522,14 +466,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showTour, setShowTour] = useState(false)
   const [tourDone, setTourDone] = useState(false)
+  const [coldStartDone, setColdStartDone] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
+  const navigate = (path) => window.location.href = path
 
   const fetchDashboard = async () => {
     try {
-      const res = await axios.get(`${API}/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await axios.get(`${API}/dashboard`, { headers: { Authorization: `Bearer ${token}` } })
       setData(res.data)
       setSessionActive(res.data.session_active)
       if (res.data.session_active && res.data.session_start) {
@@ -544,18 +488,13 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    // apply neon noir as the app default theme
     const currentTheme = user?.theme || 'neon_noir'
     document.documentElement.setAttribute('data-theme', currentTheme)
-
-    // check if tour has been shown before
     const tourSeen = localStorage.getItem(`streak_tour_${user?.user_id}`)
-    if (!tourSeen) {
-      setShowTour(true)
-    } else {
-      setTourDone(true)
-    }
-
+    const coldDone = localStorage.getItem(`streak_cold_${user?.user_id}`)
+    if (!tourSeen) setShowTour(true)
+    else setTourDone(true)
+    if (coldDone) setColdStartDone(true)
     fetchDashboard()
     socketRef.current = io(API)
     socketRef.current.on(`session_started_${user?.user_id}`, (d) => {
@@ -575,12 +514,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (sessionActive && sessionStart) {
-      timerRef.current = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - sessionStart) / 1000))
-      }, 1000)
-    } else {
-      clearInterval(timerRef.current)
-    }
+      timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - sessionStart) / 1000)), 1000)
+    } else clearInterval(timerRef.current)
     return () => clearInterval(timerRef.current)
   }, [sessionActive, sessionStart])
 
@@ -588,6 +523,11 @@ export default function Dashboard() {
     localStorage.setItem(`streak_tour_${user?.user_id}`, 'true')
     setShowTour(false)
     setTourDone(true)
+  }
+
+  const handleColdStartEnter = () => {
+    localStorage.setItem(`streak_cold_${user?.user_id}`, 'true')
+    setColdStartDone(true)
   }
 
   const formatTime = (secs) => {
@@ -612,13 +552,10 @@ export default function Dashboard() {
     setSessionStart(now)
     setElapsed(0)
     try {
-      await axios.post(`${API}/session/start`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await axios.post(`${API}/session/start`, {}, { headers: { Authorization: `Bearer ${token}` } })
     } catch (err) {
       setSessionActive(false)
       setSessionStart(null)
-      console.error(err)
     }
   }
 
@@ -628,147 +565,115 @@ export default function Dashboard() {
     setSessionStart(null)
     setElapsed(0)
     try {
-      await axios.post(`${API}/session/end`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await axios.post(`${API}/session/end`, {}, { headers: { Authorization: `Bearer ${token}` } })
       fetchDashboard()
-    } catch (err) {
-      console.error(err)
-    }
+    } catch (err) { console.error(err) }
   }
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-      <motion.div
-        animate={{ opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
+      <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }}
         style={{ fontFamily: 'var(--font-pixel)', fontSize: '24px', color: 'var(--primary)' }}>
         loading strëak...
       </motion.div>
     </div>
   )
 
-  // ── TOUR — shown once to new users ───────────────────────
-  if (showTour) return (
-    <WelcomeTour
-      userName={user?.name}
-      onDone={handleTourDone}
-    />
-  )
+  if (showTour) return <WelcomeTour userName={user?.name} onDone={handleTourDone} />
 
-  // ── COLD START — no sessions yet ─────────────────────────
-  const hasNoSessions = !data?.all_dates?.length && !sessionActive && tourDone
+  const hasNoSessions = !data?.all_dates?.length && !sessionActive && tourDone && !coldStartDone
   if (hasNoSessions) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
-      <ColdStart onStart={startSession} />
+      <ColdStart onEnter={handleColdStartEnter} />
     </div>
   )
 
-  // ── MAIN DASHBOARD ───────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
-
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '2rem' }}>
+        {/* greeting */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '1.5rem' }}>
           <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 36px)', color: 'var(--primary)', marginBottom: '6px' }}>
             {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
           </h1>
-          <p style={{ fontSize: '16px', color: 'var(--text-secondary)', opacity: 0.7 }}>
-            {sessionActive
-              ? 'session in progress. keep going.'
-              : data?.streak > 0
-                ? `you are on a ${data.streak}-day streak. don't break it.`
-                : 'sit down and start your streak today.'}
+          <p style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.75 }}>
+            {sessionActive ? 'session in progress. keep going.' : 'what are you studying today?'}
           </p>
         </motion.div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '2rem' }}>
+        {/* streak banner */}
+        {data?.streak > 0 && <StreakBanner streak={data.streak} />}
+
+        {/* daily quote */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <DailyQuote />
+        </div>
+
+        {/* stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '1.5rem' }}>
           <StatCard label="STREAK" value={data?.streak || 0} sub="consecutive days" />
           <StatCard label="TODAY" value={formatMins(data?.today_minutes)} sub="logged so far" accent />
           <StatCard label="AURA" value={Math.round(data?.aura_score || 0)} sub="out of 100" />
           <StatCard label="THIS WEEK" value={data?.weekly_data?.length || 0} sub="active days" accent />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '2rem' }}>
-          <motion.div className="glass" style={{ padding: '2rem' }}>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
-                <motion.div
-                  animate={{ opacity: sessionActive ? [0.5, 1, 0.5] : 1 }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                  style={{ width: '10px', height: '10px', borderRadius: '50%', background: sessionActive ? '#639922' : 'var(--border)' }} />
-                <span style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                  {sessionActive ? 'session active' : 'no active session'}
-                </span>
+        {/* main grid — session + device + aura | upcoming */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '16px' }}>
+
+          {/* left — session controls */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* session card */}
+            <motion.div className="glass" style={{ padding: '2rem' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
+                  <motion.div
+                    animate={{ opacity: sessionActive ? [0.5, 1, 0.5] : 1 }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    style={{ width: '10px', height: '10px', borderRadius: '50%', background: sessionActive ? '#639922' : 'var(--border)' }} />
+                  <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '600', opacity: 0.85 }}>
+                    {sessionActive ? 'session active' : 'no active session'}
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '52px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem', lineHeight: 1 }}>
+                  {sessionActive ? formatTime(elapsed) : '00:00:00'}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <motion.button className="btn-primary"
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={startSession} disabled={sessionActive}
+                    style={{ flex: 1, padding: '14px', fontSize: '16px', opacity: sessionActive ? 0.4 : 1 }}>
+                    sit down
+                  </motion.button>
+                  <motion.button className="btn-outline"
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={endSession} disabled={!sessionActive}
+                    style={{ flex: 1, padding: '14px', fontSize: '16px', opacity: !sessionActive ? 0.4 : 1 }}>
+                    stand up
+                  </motion.button>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.45, marginTop: '1rem' }}>
+                  hardware connects automatically when ESP32 is ready
+                </div>
               </div>
-              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '48px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem' }}>
-                {sessionActive ? formatTime(elapsed) : '00:00:00'}
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <motion.button className="btn-primary"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={startSession} disabled={sessionActive}
-                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: sessionActive ? 0.4 : 1 }}>
-                  sit down
-                </motion.button>
-                <motion.button className="btn-outline"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={endSession} disabled={!sessionActive}
-                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
-                  stand up
-                </motion.button>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.5, marginTop: '1rem' }}>
-                simulating PIR sensor — hardware connects later
-              </div>
+            </motion.div>
+
+            {/* device + aura side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <LEDDevice score={elapsed / 60} sessionActive={sessionActive} />
+              <AuraRing score={data?.aura_score || 0} />
             </div>
-          </motion.div>
+          </div>
 
-          <LEDDevice score={elapsed / 60} sessionActive={sessionActive} />
-          <AuraRing score={data?.aura_score || 0} />
+          {/* right — upcoming sessions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <UpcomingSessions navigate={navigate} />
+          </div>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          <motion.div className="glass" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '1.5rem' }}>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>7-DAY MOMENTUM</div>
-            {data?.weekly_data?.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={data.weekly_data}>
-                  <XAxis dataKey="date"
-                    tickFormatter={d => new Date(d).toLocaleDateString('en', { weekday: 'short' })}
-                    tick={{ fontSize: 12, fill: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}
-                    axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip formatter={(v) => [`${Math.round(v)} mins`, 'studied']}
-                    contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontFamily: 'var(--font-body)', fontSize: '13px' }} />
-                  <Bar dataKey="total_mins" radius={[6, 6, 0, 0]}>
-                    {data.weekly_data.map((_, i) => (
-                      <Cell key={i} fill={i === data.weekly_data.length - 1 ? 'var(--primary)' : 'var(--primary-light)'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ fontSize: '32px' }}>🪑</div>
-                <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '16px', color: 'var(--primary)', opacity: 0.6 }}>your desk is quiet</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-secondary)', opacity: 0.5 }}>sit down and change that</div>
-              </div>
-            )}
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <StreakCalendar dates={data?.all_dates || []} />
-          </motion.div>
-        </div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <StreakDNA dates={data?.all_dates || []} streak={data?.streak || 0} />
-        </motion.div>
       </div>
     </div>
   )
