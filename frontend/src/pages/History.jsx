@@ -35,18 +35,20 @@ export default function History() {
     return m === 0 ? `${h}h` : `${h}h ${m}m`
   }
 
-  // IST fix — backend now sends IST timestamps directly
   const formatTime = (ts) => {
     if (!ts) return '--'
-    const d = new Date(ts)
-    return d.toLocaleTimeString('en-IN', {
-      hour: '2-digit', minute: '2-digit',
-      hour12: true, timeZone: 'Asia/Kolkata'
-    })
+    // backend already sends IST — read directly from string, no conversion
+    const parts = ts.split('T')
+    if (parts.length < 2) return '--'
+    const timePart = parts[1].substring(0, 5)
+    const [hourStr, minStr] = timePart.split(':')
+    const hour = parseInt(hourStr)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12
+    return `${String(displayHour).padStart(2, '0')}:${minStr} ${ampm}`
   }
 
   const formatDate = (dateStr) => {
-    // dateStr is YYYY-MM-DD — parse without timezone shift
     const [y, m, d] = dateStr.split('-')
     const date = new Date(+y, +m - 1, +d)
     return date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -125,33 +127,54 @@ export default function History() {
                     }}>
                       {formatDate(s.date)}
                     </div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-primary)', opacity: 0.8, fontWeight: '500' }}>
+                    <div style={{
+                      fontSize: '14px', color: 'var(--text-primary)',
+                      opacity: 0.8, fontWeight: '500'
+                    }}>
                       {formatTime(s.start_time)} — {formatTime(s.end_time)}
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '22px', color: 'var(--primary)', fontWeight: '700' }}>
+                      <div style={{
+                        fontFamily: 'var(--font-pixel)', fontSize: '22px',
+                        color: 'var(--primary)', fontWeight: '700'
+                      }}>
                         {formatDuration(s.duration_minutes)}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px' }}>
+                      <div style={{
+                        fontSize: '11px', color: 'var(--text-primary)',
+                        opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px'
+                      }}>
                         DURATION
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '22px', color: 'var(--primary)', fontWeight: '700' }}>
+                      <div style={{
+                        fontFamily: 'var(--font-pixel)', fontSize: '22px',
+                        color: 'var(--primary)', fontWeight: '700'
+                      }}>
                         {Math.round(s.momentum_score)}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px' }}>
+                      <div style={{
+                        fontSize: '11px', color: 'var(--text-primary)',
+                        opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px'
+                      }}>
                         MOMENTUM
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '22px', color: 'var(--accent-dark)', fontWeight: '700' }}>
+                      <div style={{
+                        fontFamily: 'var(--font-pixel)', fontSize: '22px',
+                        color: 'var(--accent-dark)', fontWeight: '700'
+                      }}>
                         {Math.round(s.aura_score)}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px' }}>
+                      <div style={{
+                        fontSize: '11px', color: 'var(--text-primary)',
+                        opacity: 0.6, fontWeight: '600', letterSpacing: '1px', marginTop: '2px'
+                      }}>
                         AURA
                       </div>
                     </div>
