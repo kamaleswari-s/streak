@@ -59,7 +59,6 @@ const tourSlides = [
   {
     icon: (
       <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-        <rect x="10" y="18" width="10" height="6" rx="2" fill="var(--primary-light)"/>
         <rect x="10" y="20" width="10" height="24" rx="2" fill="var(--primary-light)"/>
         <rect x="27" y="14" width="10" height="30" rx="2" fill="var(--primary-light)"/>
         <rect x="44" y="8" width="10" height="36" rx="2" fill="var(--primary)"/>
@@ -228,7 +227,7 @@ function ColdStart({ onEnter }) {
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4, duration: 0.8 }}
         style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.5, marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
-        explore your dashboard, set up a session, and start your streak.
+        explore your dashboard. set up a session. start your streak.
       </motion.div>
 
       <motion.div
@@ -265,11 +264,10 @@ function StatCard({ label, value, sub, accent }) {
 
 function LEDDevice({ score, sessionActive }) {
   const getLEDColor = () => {
-    if (!sessionActive) return { color: '#ffffff', border: '#888', label: 'white', desc: 'standby — no active session' }
+    if (!sessionActive) return { color: '#ffffff', label: 'white', desc: 'standby — no active session' }
     if (score < 30) return { color: '#EF9F27', label: 'yellow', desc: 'building — under 30 mins' }
     if (score < 60) return { color: '#4A90D9', label: 'blue', desc: 'momentum growing — 30 to 60 mins' }
-    if (score < 80) return { color: '#639922', label: 'green', desc: 'full flow state — 60+ mins' }
-    return { color: '#639922', label: 'green', desc: 'milestone hit' }
+    return { color: '#639922', label: 'green', desc: 'full flow state — 60+ mins' }
   }
   const led = getLEDColor()
 
@@ -332,125 +330,30 @@ function AuraRing({ score }) {
   )
 }
 
-function DailyQuote() {
+function DailyQuoteBanner({ streak, sessionActive }) {
   const quote = quotes[new Date().getDate() % quotes.length]
   return (
     <motion.div className="glass"
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      style={{ padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
-      <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '0.75rem', opacity: 0.6 }}>TODAY'S QUOTE</div>
-      <div style={{ fontSize: '16px', color: 'var(--text-primary)', lineHeight: 1.7, fontStyle: 'italic', marginBottom: '0.5rem', opacity: 0.9 }}>
-        "{quote.text}"
-      </div>
-      <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: '700' }}>— {quote.author}</div>
-    </motion.div>
-  )
-}
-
-function StreakBanner({ streak }) {
-  if (!streak || streak === 0) return null
-  const getMessage = () => {
-    if (streak === 1) return 'streak started. show up tomorrow.'
-    if (streak < 7) return `${streak} days in. the habit is forming.`
-    if (streak < 14) return `${streak} days. one full week done. keep going.`
-    if (streak < 30) return `${streak} days. you are building something real.`
-    if (streak < 60) return `${streak} days. one month of showing up. respect.`
-    return `${streak} days. this is who you are now.`
-  }
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
       style={{
-        padding: '1.25rem 1.75rem',
-        background: 'var(--primary)',
-        borderRadius: 'var(--radius-md)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '1.5rem', flexWrap: 'wrap', gap: '12px'
+        padding: '1.25rem 1.75rem', marginBottom: '1.5rem',
+        display: 'flex', alignItems: 'center', gap: '24px',
+        flexWrap: 'wrap', borderLeft: '4px solid var(--primary)'
       }}>
-      <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'white', fontWeight: '700' }}>
-        {streak} day streak
-      </div>
-      <div style={{ fontSize: '15px', color: 'rgba(255,255,255,0.85)', fontWeight: '500' }}>
-        {getMessage()}
-      </div>
-      <motion.div
-        animate={{ opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'white', flexShrink: 0 }} />
-    </motion.div>
-  )
-}
-
-function UpcomingSessions({ navigate }) {
-  const [events, setEvents] = useState([])
-
-  useEffect(() => {
-    const saved = localStorage.getItem('streak_calendar_events')
-    if (saved) {
-      const all = JSON.parse(saved)
-      const today = new Date().toISOString().split('T')[0]
-      const upcoming = all
-        .filter(e => e.date >= today && !e.completed)
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(0, 3)
-      setEvents(upcoming)
-    }
-  }, [])
-
-  return (
-    <motion.div className="glass" style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', opacity: 0.7 }}>UPCOMING SESSIONS</div>
-        <motion.button whileHover={{ scale: 1.05 }} onClick={() => navigate('/calendar')}
-          style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700', fontFamily: 'var(--font-body)' }}>
-          view all →
-        </motion.button>
-      </div>
-
-      {events.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-          <div style={{ fontSize: '14px', color: 'var(--text-primary)', opacity: 0.6, marginBottom: '8px' }}>no upcoming sessions planned</div>
-          <motion.button whileHover={{ scale: 1.03 }} onClick={() => navigate('/calendar')}
-            style={{
-              fontSize: '13px', color: 'var(--primary)', background: 'rgba(96,96,210,0.08)',
-              border: '1.5px solid var(--primary)', borderRadius: '10px',
-              cursor: 'pointer', padding: '8px 16px', fontFamily: 'var(--font-body)', fontWeight: '600'
-            }}>
-            plan a session
-          </motion.button>
+      <div style={{ flex: 1, minWidth: '200px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '6px', opacity: 0.55 }}>TODAY'S QUOTE</div>
+        <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic', opacity: 0.9 }}>
+          "{quote.text}"
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {events.map((event, i) => {
-            const date = new Date(event.date)
-            const isToday = event.date === new Date().toISOString().split('T')[0]
-            const isTomorrow = event.date === new Date(Date.now() + 86400000).toISOString().split('T')[0]
-            const label = isToday ? 'today' : isTomorrow ? 'tomorrow' : date.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })
-            return (
-              <motion.div key={event.id}
-                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '10px 14px', borderRadius: '10px',
-                  background: isToday ? 'rgba(96,96,210,0.08)' : 'var(--surface)',
-                  border: isToday ? '1.5px solid var(--primary)' : '1.5px solid var(--border)'
-                }}>
-                <div>
-                  <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '14px', color: 'var(--primary)', marginBottom: '2px' }}>{event.title}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.6 }}>
-                    {label}{event.time ? ` · ${event.time}` : ''}
-                    {event.duration ? ` · ${event.duration}` : ''}
-                  </div>
-                </div>
-                {isToday && (
-                  <div style={{ fontSize: '11px', background: 'var(--primary)', color: 'white', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
-                    today
-                  </div>
-                )}
-              </motion.div>
-            )
-          })}
+        <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: '700', marginTop: '4px' }}>— {quote.author}</div>
+      </div>
+      {streak > 0 && (
+        <div style={{
+          textAlign: 'center', padding: '0.75rem 1.5rem',
+          background: 'var(--primary)', borderRadius: '12px', flexShrink: 0
+        }}>
+          <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '28px', color: 'white', lineHeight: 1 }}>{streak}</div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: '600', marginTop: '3px' }}>day streak</div>
         </div>
       )}
     </motion.div>
@@ -469,7 +372,6 @@ export default function Dashboard() {
   const [coldStartDone, setColdStartDone] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
-  const navigate = (path) => window.location.href = path
 
   const fetchDashboard = async () => {
     try {
@@ -600,79 +502,66 @@ export default function Dashboard() {
             {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
           </h1>
           <p style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.75 }}>
-            {sessionActive ? 'session in progress. keep going.' : 'what are you studying today?'}
+            {sessionActive
+              ? 'session in progress. keep going.'
+              : data?.streak > 0
+                ? `you are on a ${data.streak}-day streak. don't break it.`
+                : 'sit down and start your streak today.'}
           </p>
         </motion.div>
 
-        {/* streak banner */}
-        {data?.streak > 0 && <StreakBanner streak={data.streak} />}
-
-        {/* daily quote */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <DailyQuote />
-        </div>
+        {/* quote + streak merged banner */}
+        <DailyQuoteBanner streak={data?.streak || 0} sessionActive={sessionActive} />
 
         {/* stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '2rem' }}>
           <StatCard label="STREAK" value={data?.streak || 0} sub="consecutive days" />
           <StatCard label="TODAY" value={formatMins(data?.today_minutes)} sub="logged so far" accent />
           <StatCard label="AURA" value={Math.round(data?.aura_score || 0)} sub="out of 100" />
           <StatCard label="THIS WEEK" value={data?.weekly_data?.length || 0} sub="active days" accent />
         </div>
 
-        {/* main grid — session + device + aura | upcoming */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '16px' }}>
+        {/* session + device + aura — original 3 column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
 
-          {/* left — session controls */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-            {/* session card */}
-            <motion.div className="glass" style={{ padding: '2rem' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
-                  <motion.div
-                    animate={{ opacity: sessionActive ? [0.5, 1, 0.5] : 1 }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    style={{ width: '10px', height: '10px', borderRadius: '50%', background: sessionActive ? '#639922' : 'var(--border)' }} />
-                  <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '600', opacity: 0.85 }}>
-                    {sessionActive ? 'session active' : 'no active session'}
-                  </span>
-                </div>
-                <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '52px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem', lineHeight: 1 }}>
-                  {sessionActive ? formatTime(elapsed) : '00:00:00'}
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <motion.button className="btn-primary"
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    onClick={startSession} disabled={sessionActive}
-                    style={{ flex: 1, padding: '14px', fontSize: '16px', opacity: sessionActive ? 0.4 : 1 }}>
-                    sit down
-                  </motion.button>
-                  <motion.button className="btn-outline"
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    onClick={endSession} disabled={!sessionActive}
-                    style={{ flex: 1, padding: '14px', fontSize: '16px', opacity: !sessionActive ? 0.4 : 1 }}>
-                    stand up
-                  </motion.button>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.45, marginTop: '1rem' }}>
-                  hardware connects automatically when ESP32 is ready
-                </div>
+          {/* current session */}
+          <motion.div className="glass" style={{ padding: '2rem' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
+                <motion.div
+                  animate={{ opacity: sessionActive ? [0.5, 1, 0.5] : 1 }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  style={{ width: '10px', height: '10px', borderRadius: '50%', background: sessionActive ? '#639922' : 'var(--border)' }} />
+                <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '600', opacity: 0.85 }}>
+                  {sessionActive ? 'session active' : 'no active session'}
+                </span>
               </div>
-            </motion.div>
-
-            {/* device + aura side by side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <LEDDevice score={elapsed / 60} sessionActive={sessionActive} />
-              <AuraRing score={data?.aura_score || 0} />
+              <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '48px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem', lineHeight: 1 }}>
+                {sessionActive ? formatTime(elapsed) : '00:00:00'}
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <motion.button className="btn-primary"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={startSession} disabled={sessionActive}
+                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: sessionActive ? 0.4 : 1 }}>
+                  sit down
+                </motion.button>
+                <motion.button className="btn-outline"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={endSession} disabled={!sessionActive}
+                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
+                  stand up
+                </motion.button>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.4, marginTop: '1rem' }}>
+                hardware connects automatically when ESP32 is ready
+              </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* right — upcoming sessions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <UpcomingSessions navigate={navigate} />
-          </div>
+          <LEDDevice score={elapsed / 60} sessionActive={sessionActive} />
+          <AuraRing score={data?.aura_score || 0} />
         </div>
       </div>
     </div>
