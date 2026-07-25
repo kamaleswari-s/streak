@@ -4,8 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
 import Navbar from '../components/layout/Navbar'
-
-const API = 'http://localhost:5000'
+import API from '../config'
 
 function BehavioralInsights({ data }) {
   if (!data?.stats?.total_sessions || data.stats.total_sessions < 3) return null

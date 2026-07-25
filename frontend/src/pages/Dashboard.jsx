@@ -5,8 +5,7 @@ import axios from 'axios'
 import io from 'socket.io-client'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
-
-const API = 'http://localhost:5000'
+import API from '../config'
 
 const quotes = [
   { text: 'small daily improvements are the key to staggering long-term results.', author: 'Robin Sharma' },

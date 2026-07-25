@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import Navbar from '../components/layout/Navbar'
-
-const API = 'http://localhost:5000'
+import API from '../config'
 
 const lightThemes = [
   { id: 'berry_dreams', name: 'Berry Dreams' },
