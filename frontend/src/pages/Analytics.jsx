@@ -6,6 +6,74 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, 
 import Navbar from '../components/layout/Navbar'
 import API from '../config'
 
+// --- minimal line icons, matching the app's existing violet accent style ---
+const ClockIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" stroke="var(--primary)" strokeWidth="2" />
+    <path d="M12 7v5l3.5 2" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const CalendarIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect x="4" y="6" width="16" height="14" rx="2.5" stroke="var(--primary)" strokeWidth="2" />
+    <path d="M4 10h16M8 4v4M16 4v4" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+const TrendDownIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M5 8l6 6 3-3 5 5" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M15 16h4v-4" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const BarsIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M6 18v-4M12 18v-8M18 18v-6" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
+const FlameIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M12 3c1 3-3 4-3 7a3 3 0 006 0c0-1-1-2-1-3 2 1 3 3 3 5a5 5 0 01-10 0c0-4 3-6 5-9z" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const TrophyIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M7 4h10v4a5 5 0 01-10 0V4z" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M7 5H4a3 3 0 003 5M17 5h3a3 3 0 01-3 5" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+    <path d="M12 13v4M9 20h6M10 17h4v3h-4z" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const TrendUpIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M5 16l6-6 3 3 5-5" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M15 8h4v4" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const SteadyIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M5 12h14" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />
+    <path d="M15 8l4 4-4 4" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const EmptyStateIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 80 80" fill="none">
+    <g stroke="var(--primary)" strokeWidth="4.5" strokeLinecap="round">
+      <line x1="20" y1="58" x2="20" y2="44" />
+      <line x1="40" y1="58" x2="40" y2="32" />
+      <line x1="60" y1="58" x2="60" y2="20" />
+    </g>
+    <circle cx="67" cy="14" r="2" fill="var(--primary)" />
+    <circle cx="58" cy="10" r="1.2" fill="var(--primary)" />
+  </svg>
+)
+
 function BehavioralInsights({ data }) {
   if (!data?.stats?.total_sessions || data.stats.total_sessions < 3) return null
 
@@ -16,7 +84,7 @@ function BehavioralInsights({ data }) {
     const hour = parseInt(bestHour.hour)
     const timeStr = hour === 0 ? '12am' : hour < 12 ? `${hour}am` : hour === 12 ? '12pm' : `${hour - 12}pm`
     insights.push({
-      icon: '⏰',
+      icon: <ClockIcon />,
       title: 'peak study time',
       text: `you study best around ${timeStr}. your sessions starting at this hour are consistently your longest and most focused.`
     })
@@ -26,13 +94,13 @@ function BehavioralInsights({ data }) {
     const bestDay = data.by_day[0].day?.trim()
     const worstDay = data.by_day[data.by_day.length - 1]?.day?.trim()
     insights.push({
-      icon: '📅',
+      icon: <CalendarIcon />,
       title: 'most productive day',
       text: `${bestDay} is your strongest study day. you show up more consistently and for longer on ${bestDay} than any other day of the week.`
     })
     if (worstDay && worstDay !== bestDay) {
       insights.push({
-        icon: '📉',
+        icon: <TrendDownIcon />,
         title: 'weakest day',
         text: `${worstDay} is your lightest study day. consider protecting this day from distractions or scheduling shorter focused sessions to keep the streak alive.`
       })
@@ -45,7 +113,7 @@ function BehavioralInsights({ data }) {
     const m = avg % 60
     const avgStr = h > 0 ? `${h}h ${m}m` : `${m}m`
     insights.push({
-      icon: '📊',
+      icon: <BarsIcon />,
       title: 'average session length',
       text: avg >= 60
         ? `your average session is ${avgStr}. that is above 60 minutes — you are consistently hitting deep focus territory. keep it up.`
@@ -59,7 +127,7 @@ function BehavioralInsights({ data }) {
     const totalHours = Math.round(data.stats.total_mins / 60)
     const totalSessions = data.stats.total_sessions
     insights.push({
-      icon: '🔥',
+      icon: <FlameIcon />,
       title: 'total effort logged',
       text: `${totalHours} hours across ${totalSessions} sessions. that is not a number you can fake. strëak has the proof — and so do you.`
     })
@@ -71,7 +139,7 @@ function BehavioralInsights({ data }) {
     const bm = best % 60
     const bestStr = bh > 0 ? `${bh}h ${bm}m` : `${bm}m`
     insights.push({
-      icon: '🏆',
+      icon: <TrophyIcon />,
       title: 'personal best session',
       text: `your longest session ever was ${bestStr}. that is your benchmark. every session is a chance to get closer to it again.`
     })
@@ -84,19 +152,19 @@ function BehavioralInsights({ data }) {
     const olderAvg = older.reduce((a, b) => a + (b.total || 0), 0) / older.length
     if (recentAvg > olderAvg * 1.1) {
       insights.push({
-        icon: '📈',
+        icon: <TrendUpIcon />,
         title: 'momentum trending up',
         text: `your recent sessions are longer than your earlier ones. your consistency is compounding. this is exactly how habits form — keep going.`
       })
     } else if (recentAvg < olderAvg * 0.7) {
       insights.push({
-        icon: '⚠️',
+        icon: <TrendDownIcon />,
         title: 'momentum dipping',
         text: `your recent sessions are shorter than usual. this is normal — life happens. even showing up for 20 minutes today resets the pattern and protects your streak.`
       })
     } else {
       insights.push({
-        icon: '➡️',
+        icon: <SteadyIcon />,
         title: 'momentum steady',
         text: `your session lengths have been consistent recently. consistency is the foundation — now try pushing duration by 10 minutes to build upward momentum.`
       })
@@ -150,7 +218,7 @@ function BehavioralInsights({ data }) {
               display: 'flex', gap: '14px', alignItems: 'flex-start'
             }}>
             <div style={{
-              fontSize: '28px', flexShrink: 0,
+              flexShrink: 0,
               width: '44px', height: '44px',
               background: 'var(--surface-2)',
               borderRadius: '12px',
@@ -225,7 +293,9 @@ export default function Analytics() {
 
           ) : !data?.stats?.total_sessions ? (
             <div className="glass" style={{ padding: '4rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '48px', marginBottom: '1rem' }}>📊</div>
+              <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                <EmptyStateIcon />
+              </div>
               <div style={{
                 fontFamily: 'var(--font-pixel)', fontSize: '20px', color: 'var(--primary)'
               }}>not enough data yet</div>
