@@ -6,6 +6,7 @@ import io from 'socket.io-client'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 import API from '../config'
+import useWakeLock from '../useWakeLock'
 
 const quotes = [
   { text: 'small daily improvements are the key to staggering long-term results.', author: 'Robin Sharma' },
@@ -422,6 +423,7 @@ export default function Dashboard() {
   const [coldStartDone, setColdStartDone] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
+  const { requestWakeLock, releaseWakeLock } = useWakeLock()
 
   const fetchDashboard = async () => {
     try {
@@ -470,6 +472,27 @@ export default function Dashboard() {
     } else clearInterval(timerRef.current)
     return () => clearInterval(timerRef.current)
   }, [sessionActive, sessionStart])
+
+  // wake lock — tied directly to sessionActive, so it engages no matter
+  // what actually started the session (manual button or hardware socket event)
+  useEffect(() => {
+    if (sessionActive) {
+      requestWakeLock()
+    } else {
+      releaseWakeLock()
+    }
+  }, [sessionActive])
+
+  // re-engage wake lock if the tab was backgrounded and comes back mid-session
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && sessionActive) {
+        requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [sessionActive])
 
   const handleTourDone = () => {
     localStorage.setItem(`streak_tour_${user?.user_id}`, 'true')
