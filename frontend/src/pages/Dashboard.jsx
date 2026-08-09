@@ -102,6 +102,95 @@ function LateNightNudge({ show, onDismiss }) {
   )
 }
 
+// full-screen pause countdown — dims the real dashboard behind it,
+// ring depletes live, stays open through completion until dismissed
+function ResumeAlarmOverlay({ pausedUntil, pauseTotalMs, onDismiss }) {
+  const [remainingMs, setRemainingMs] = useState(pausedUntil ? pausedUntil - Date.now() : 0)
+  const [isDone, setIsDone] = useState(false)
+  const chimedRef = useRef(false)
+
+  useEffect(() => {
+    if (!pausedUntil) return
+    chimedRef.current = false
+    setIsDone(false)
+
+    const tick = () => {
+      const rem = pausedUntil - Date.now()
+      if (rem <= 0) {
+        setRemainingMs(0)
+        if (!chimedRef.current) {
+          chimedRef.current = true
+          setIsDone(true)
+          playResumeChime()
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('STRËAK', { body: "Time's up — ready to get back to it?" })
+          }
+        }
+      } else {
+        setRemainingMs(rem)
+      }
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [pausedUntil])
+
+  if (!pausedUntil) return null
+
+  const totalSec = Math.max(pauseTotalMs / 1000, 1)
+  const remainingSec = Math.max(remainingMs / 1000, 0)
+  const progress = 1 - remainingSec / totalSec
+  const circumference = 2 * Math.PI * 85
+  const offset = circumference * progress
+
+  const showHours = totalSec >= 3600
+  const displayStr = showHours
+    ? `${String(Math.floor(remainingSec / 3600)).padStart(2, '0')}:${String(Math.floor((remainingSec % 3600) / 60)).padStart(2, '0')}`
+    : `${String(Math.floor(remainingSec / 60)).padStart(2, '0')}:${String(Math.floor(remainingSec % 60)).padStart(2, '0')}`
+
+  const targetTimeStr = new Date(pausedUntil).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 999,
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: isDone ? [1, 1.03, 1] : 1 }}
+        transition={isDone ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+        className="glass"
+        style={{ padding: '2.5rem', textAlign: 'center', width: '280px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontWeight: 600 }}>
+          {isDone ? "time's up" : `back at ${targetTimeStr}`}
+        </div>
+        <div style={{ position: 'relative', width: '190px', height: '190px', margin: '0 auto' }}>
+          <svg width="190" height="190" viewBox="0 0 190 190">
+            <circle cx="95" cy="95" r="85" fill="none" stroke="var(--border)" strokeWidth="10" />
+            <circle cx="95" cy="95" r="85" fill="none"
+              stroke={isDone ? 'var(--accent)' : 'var(--primary)'} strokeWidth="10" strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference - offset}
+              style={{ transform: 'rotate(-90deg)', transformOrigin: '95px 95px', transition: 'stroke-dashoffset 1s linear' }} />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--font-pixel)', fontSize: '32px', color: 'var(--text-primary)'
+          }}>
+            {isDone ? (showHours ? '00:00' : '00:00') : displayStr}
+          </div>
+        </div>
+        {isDone && (
+          <button className="btn-primary" onClick={onDismiss} style={{ marginTop: '1.5rem', width: '100%' }}>
+            i'm back
+          </button>
+        )}
+      </motion.div>
+    </div>
+  )
+}
+
 function WelcomeTour({ userName, onDone }) {
   const [slide, setSlide] = useState(0)
   const next = () => slide < tourSlides.length - 1 ? setSlide(s => s + 1) : onDone()
@@ -349,8 +438,6 @@ function AuraRing({ score }) {
   )
 }
 
-// generates a sentence from real data instead of picking a random quote —
-// only ever states something true, never gives advice or asks for anything
 function getDailySentence(data) {
   const streak = data?.streak || 0
   const todayMins = data?.today_minutes || 0
@@ -467,6 +554,29 @@ function UpcomingSessionsCard({ navigate }) {
   )
 }
 
+function playResumeChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const notes = [440, 554, 659]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = freq
+      osc.type = 'sine'
+      const startTime = ctx.currentTime + i * 0.18
+      gain.gain.setValueAtTime(0, startTime)
+      gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05)
+      gain.gain.linearRampToValueAtTime(0, startTime + 0.35)
+      osc.start(startTime)
+      osc.stop(startTime + 0.4)
+    })
+  } catch (err) {
+    console.log('Could not play chime:', err.message)
+  }
+}
+
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
   const navigate = useNavigate()
@@ -479,6 +589,12 @@ export default function Dashboard() {
   const [tourDone, setTourDone] = useState(false)
   const [coldStartDone, setColdStartDone] = useState(false)
   const [showLateNightNudge, setShowLateNightNudge] = useState(false)
+  const [showStandUpOptions, setShowStandUpOptions] = useState(false)
+  const [resumeMode, setResumeMode] = useState('time')
+  const [resumeTimeInput, setResumeTimeInput] = useState('16:30')
+  const [resumeDurationMin, setResumeDurationMin] = useState(30)
+  const [pausedUntil, setPausedUntil] = useState(null)
+  const [pauseTotalMs, setPauseTotalMs] = useState(0)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
   const nudgeShownRef = useRef(false)
@@ -532,23 +648,26 @@ export default function Dashboard() {
     return () => clearInterval(timerRef.current)
   }, [sessionActive, sessionStart])
 
+  // wake lock — covers an active session AND a pending pause countdown
   useEffect(() => {
-    if (sessionActive) {
+    const pauseActive = pausedUntil !== null
+    if (sessionActive || pauseActive) {
       requestWakeLock()
     } else {
       releaseWakeLock()
     }
-  }, [sessionActive])
+  }, [sessionActive, pausedUntil])
 
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && sessionActive) {
+      const pauseActive = pausedUntil !== null
+      if (document.visibilityState === 'visible' && (sessionActive || pauseActive)) {
         requestWakeLock()
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [sessionActive])
+  }, [sessionActive, pausedUntil])
 
   useEffect(() => {
     if (!sessionActive) {
@@ -569,6 +688,10 @@ export default function Dashboard() {
   }, [sessionActive])
 
   const dismissLateNightNudge = () => setShowLateNightNudge(false)
+  const dismissResumeAlarm = () => {
+    setPausedUntil(null)
+    setPauseTotalMs(0)
+  }
 
   const handleTourDone = () => {
     localStorage.setItem(`streak_tour_${user?.user_id}`, 'true')
@@ -621,6 +744,31 @@ export default function Dashboard() {
     } catch (err) { console.error(err) }
   }
 
+  const handleJustStop = () => {
+    setShowStandUpOptions(false)
+    endSession()
+  }
+
+  const handleStartResumeTimer = () => {
+    let targetMs
+    if (resumeMode === 'time') {
+      const [h, m] = resumeTimeInput.split(':').map(Number)
+      const target = new Date()
+      target.setHours(h, m, 0, 0)
+      if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1)
+      targetMs = target.getTime()
+    } else {
+      targetMs = Date.now() + resumeDurationMin * 60 * 1000
+    }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+    setShowStandUpOptions(false)
+    setPauseTotalMs(targetMs - Date.now())
+    setPausedUntil(targetMs)
+    endSession()
+  }
+
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
       <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }}
@@ -644,6 +792,7 @@ export default function Dashboard() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
       <LateNightNudge show={showLateNightNudge} onDismiss={dismissLateNightNudge} />
+      <ResumeAlarmOverlay pausedUntil={pausedUntil} pauseTotalMs={pauseTotalMs} onDismiss={dismissResumeAlarm} />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* greeting */}
@@ -703,20 +852,73 @@ export default function Dashboard() {
               <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '48px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem', lineHeight: 1 }}>
                 {sessionActive ? formatTime(elapsed) : '00:00:00'}
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <motion.button className="btn-primary"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={startSession} disabled={sessionActive}
-                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: sessionActive ? 0.4 : 1 }}>
-                  sit down
-                </motion.button>
-                <motion.button className="btn-outline"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                  onClick={endSession} disabled={!sessionActive}
-                  style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
-                  stand up
-                </motion.button>
-              </div>
+
+              {showStandUpOptions ? (
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+                    <button onClick={() => setResumeMode('time')}
+                      style={{
+                        flex: 1, padding: '8px 4px', fontSize: '11px', cursor: 'pointer',
+                        fontWeight: resumeMode === 'time' ? 700 : 400,
+                        background: resumeMode === 'time' ? 'var(--surface-2)' : 'transparent',
+                        border: '2px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)'
+                      }}>
+                      at a time
+                    </button>
+                    <button onClick={() => setResumeMode('duration')}
+                      style={{
+                        flex: 1, padding: '8px 4px', fontSize: '11px', cursor: 'pointer',
+                        fontWeight: resumeMode === 'duration' ? 700 : 400,
+                        background: resumeMode === 'duration' ? 'var(--surface-2)' : 'transparent',
+                        border: '2px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)'
+                      }}>
+                      for a duration
+                    </button>
+                  </div>
+
+                  {resumeMode === 'time' ? (
+                    <input type="time" value={resumeTimeInput}
+                      onChange={e => setResumeTimeInput(e.target.value)}
+                      style={{ marginBottom: '10px' }} />
+                  ) : (
+                    <div style={{ marginBottom: '10px' }}>
+                      <input type="range" min="5" max="120" step="5" value={resumeDurationMin}
+                        onChange={e => setResumeDurationMin(Number(e.target.value))}
+                        style={{ width: '100%' }} />
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', textAlign: 'center' }}>
+                        {resumeDurationMin} min
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button className="btn-outline" onClick={handleJustStop}
+                      style={{ flex: 1, padding: '8px 4px', fontSize: '12px' }}>
+                      just stop
+                    </button>
+                    <button className="btn-primary" onClick={handleStartResumeTimer}
+                      style={{ flex: 1, padding: '8px 4px', fontSize: '12px' }}>
+                      start
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <motion.button className="btn-primary"
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={startSession} disabled={sessionActive}
+                    style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: sessionActive ? 0.4 : 1 }}>
+                    sit down
+                  </motion.button>
+                  <motion.button className="btn-outline"
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    onClick={() => sessionActive && setShowStandUpOptions(true)} disabled={!sessionActive}
+                    style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
+                    stand up
+                  </motion.button>
+                </div>
+              )}
+
               <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.4, marginTop: '1rem' }}>
                 hardware connects automatically when ESP32 is ready
               </div>
