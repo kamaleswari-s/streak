@@ -159,7 +159,10 @@ def signup():
     except psycopg2.errors.UniqueViolation:
         return jsonify({"error": "Email already registered"}), 409
 
-    token = jwt.encode({"user_id": user_id}, JWT_SECRET, algorithm="HS256")
+    token = jwt.encode({
+        "user_id": user_id,
+        "exp": datetime.now(IST) + timedelta(days=30)
+    }, JWT_SECRET, algorithm="HS256")
     return jsonify({"token": token, "user_id": user_id, "name": name, "onboarded": False})
 
 @app.route("/auth/login", methods=["POST"])
@@ -178,7 +181,10 @@ def login():
     if not user or not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
         return jsonify({"error": "Invalid email or password"}), 401
 
-    token = jwt.encode({"user_id": user["id"]}, JWT_SECRET, algorithm="HS256")
+    token = jwt.encode({
+        "user_id": user["id"],
+        "exp": datetime.now(IST) + timedelta(days=30)
+    }, JWT_SECRET, algorithm="HS256")
     return jsonify({
         "token": token,
         "user_id": user["id"],
