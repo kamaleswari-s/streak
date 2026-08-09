@@ -524,6 +524,10 @@ def update_settings():
     conn.close()
     return jsonify({"status": "updated"})
 
+@app.route('/health')
+def health():
+    return "OK", 200
+
 # ── RUN ───────────────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
