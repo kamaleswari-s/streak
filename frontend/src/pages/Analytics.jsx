@@ -62,6 +62,12 @@ const SteadyIcon = () => (
   </svg>
 )
 
+const MoonIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
 const EmptyStateIcon = () => (
   <svg width="48" height="48" viewBox="0 0 80 80" fill="none">
     <g stroke="var(--primary)" strokeWidth="4.5" strokeLinecap="round">
@@ -73,6 +79,54 @@ const EmptyStateIcon = () => (
     <circle cx="58" cy="10" r="1.2" fill="var(--primary)" />
   </svg>
 )
+
+function SleepPattern({ pattern }) {
+  if (!pattern) return null
+
+  const { late_night_days, days_tracked, avg_rest_gap_hours, longest_late_streak } = pattern
+
+  let message
+  if (longest_late_streak >= 3) {
+    message = `${longest_late_streak} nights in a row past 11pm. try wrapping up by 11 tomorrow — one night back on track is usually enough to break the pattern.`
+  } else if (late_night_days > 0) {
+    message = `${late_night_days} late night${late_night_days > 1 ? 's' : ''} out of the last ${days_tracked} tracked, but not back-to-back — nothing alarming, just worth keeping an eye on.`
+  } else {
+    message = `no late nights in the last ${days_tracked} tracked days. solid rest pattern — keep it up.`
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass"
+      style={{
+        padding: '1.75rem', marginBottom: '2rem',
+        display: 'flex', gap: '16px', alignItems: 'flex-start'
+      }}>
+      <div style={{
+        flexShrink: 0, width: '44px', height: '44px',
+        background: 'var(--surface-2)', borderRadius: '12px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <MoonIcon />
+      </div>
+      <div>
+        <div style={{
+          fontFamily: 'var(--font-pixel)', fontSize: '16px',
+          color: 'var(--primary)', marginBottom: '6px'
+        }}>rest pattern</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          {message}
+        </div>
+        {avg_rest_gap_hours && (
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.6, marginTop: '6px' }}>
+            average {avg_rest_gap_hours}h between sessions overnight
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
 
 function BehavioralInsights({ data }) {
   if (!data?.stats?.total_sessions || data.stats.total_sessions < 3) return null
@@ -308,6 +362,9 @@ export default function Analytics() {
             <>
               {/* BEHAVIORAL INTELLIGENCE — shown first, most important */}
               <BehavioralInsights data={data} />
+
+              {/* REST PATTERN — separate from the insight cards on purpose, plain language */}
+              <SleepPattern pattern={data.sleep_pattern} />
 
               {/* stat summary */}
               <div style={{

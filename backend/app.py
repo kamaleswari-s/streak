@@ -127,6 +127,67 @@ def get_streak(user_id):
 
     return streak
 
+# ── SLEEP PATTERN (late-night flag + rest gap + streak) ───
+def get_sleep_pattern(user_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT date, MIN(start_time) as first_start, MAX(end_time) as last_end
+        FROM sessions
+        WHERE user_id = %s AND duration_minutes > 0
+        AND date >= %s
+        GROUP BY date ORDER BY date ASC
+    """, (user_id, (datetime.now(IST).date() - timedelta(days=14)).isoformat()))
+    days = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    if len(days) < 3:
+        return None
+
+    late_night_dates = set()
+    for d in days:
+        start_hour = d["first_start"].astimezone(IST).hour
+        end_hour = d["last_end"].astimezone(IST).hour if d["last_end"] else start_hour
+        if (start_hour >= 23 or start_hour < 4) or (end_hour >= 23 or end_hour < 4):
+            late_night_dates.add(d["date"])
+
+    gaps = []
+    for i in range(len(days) - 1):
+        this_day = days[i]
+        next_day = days[i + 1]
+        if not this_day["last_end"] or not next_day["first_start"]:
+            continue
+        d1 = date.fromisoformat(this_day["date"])
+        d2 = date.fromisoformat(next_day["date"])
+        if (d2 - d1).days != 1:
+            continue
+        gap_hours = (next_day["first_start"] - this_day["last_end"]).total_seconds() / 3600
+        if 0 < gap_hours < 16:
+            gaps.append(gap_hours)
+
+    avg_gap = round(sum(gaps) / len(gaps), 1) if gaps else None
+
+    sorted_late = sorted(late_night_dates)
+    longest_streak = 0
+    current_streak = 0
+    prev_date = None
+    for d_str in sorted_late:
+        d = date.fromisoformat(d_str)
+        if prev_date and (d - prev_date).days == 1:
+            current_streak += 1
+        else:
+            current_streak = 1
+        longest_streak = max(longest_streak, current_streak)
+        prev_date = d
+
+    return {
+        "late_night_days": len(late_night_dates),
+        "days_tracked": len(days),
+        "avg_rest_gap_hours": avg_gap,
+        "longest_late_streak": longest_streak
+    }
+
 # ── SESSION STATE ─────────────────────────────────────────
 active_sessions = {}
 
@@ -417,11 +478,14 @@ def analytics():
     cur.close()
     conn.close()
 
+    sleep_pattern = get_sleep_pattern(user_id)
+
     return jsonify({
         "by_hour": [dict(r) for r in by_hour],
         "by_day": [dict(r) for r in by_day],
         "monthly_trend": [dict(r) for r in monthly],
-        "stats": dict(stats)
+        "stats": dict(stats),
+        "sleep_pattern": sleep_pattern
     })
 
 # ── HISTORY ───────────────────────────────────────────────
