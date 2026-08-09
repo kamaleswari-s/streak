@@ -8,21 +8,6 @@ import Navbar from '../components/layout/Navbar'
 import API from '../config'
 import useWakeLock from '../useWakeLock'
 
-const quotes = [
-  { text: 'small daily improvements are the key to staggering long-term results.', author: 'Robin Sharma' },
-  { text: 'you do not rise to the level of your goals. you fall to the level of your systems.', author: 'James Clear' },
-  { text: 'the secret of getting ahead is getting started.', author: 'Mark Twain' },
-  { text: 'it is not about having time. it is about making time.', author: 'unknown' },
-  { text: 'discipline is choosing between what you want now and what you want most.', author: 'Abraham Lincoln' },
-  { text: 'success is the sum of small efforts repeated day in and day out.', author: 'Robert Collier' },
-  { text: 'do something today that your future self will thank you for.', author: 'Sean Patrick Flanery' },
-  { text: 'the pain of discipline is far less than the pain of regret.', author: 'unknown' },
-  { text: 'focus on progress, not perfection.', author: 'unknown' },
-  { text: 'your future is created by what you do today, not tomorrow.', author: 'Robert Kiyosaki' },
-  { text: 'motivation gets you going, but discipline keeps you growing.', author: 'John C. Maxwell' },
-  { text: 'the harder you work for something, the greater you will feel when you achieve it.', author: 'unknown' },
-]
-
 const tourSlides = [
   { isLogo: true },
   {
@@ -72,6 +57,50 @@ const tourSlides = [
     desc: 'white means standby. yellow builds. blue grows. green means flow. red means your phone is on the desk.',
   },
 ]
+
+function MoonIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function LateNightNudge({ show, onDismiss }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          className="glass"
+          style={{
+            position: 'fixed', top: '24px', right: '24px', zIndex: 998,
+            maxWidth: '340px', padding: '1.25rem 1.5rem',
+            borderLeft: '4px solid var(--primary)',
+            display: 'flex', gap: '12px', alignItems: 'flex-start'
+          }}>
+          <motion.div
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2.5, repeat: Infinity }}
+            style={{ flexShrink: 0, marginTop: '2px' }}>
+            <MoonIcon />
+          </motion.div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: '8px' }}>
+              still going past 11? if there's a real reason tonight, keep at it. if not, this is a good place to stop.
+            </div>
+            <span onClick={onDismiss}
+              style={{ fontSize: '12px', color: 'var(--primary)', cursor: 'pointer', fontWeight: '600' }}>
+              got it →
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 function WelcomeTour({ userName, onDone }) {
   const [slide, setSlide] = useState(0)
@@ -320,8 +349,37 @@ function AuraRing({ score }) {
   )
 }
 
-function DailyQuoteBanner({ streak }) {
-  const quote = quotes[new Date().getDate() % quotes.length]
+// generates a sentence from real data instead of picking a random quote —
+// only ever states something true, never gives advice or asks for anything
+function getDailySentence(data) {
+  const streak = data?.streak || 0
+  const todayMins = data?.today_minutes || 0
+  const weekly = data?.weekly_data || []
+
+  const pastDays = weekly.filter(d => d.total_mins != null)
+  const avgMins = pastDays.length > 0
+    ? pastDays.reduce((sum, d) => sum + d.total_mins, 0) / pastDays.length
+    : 0
+
+  if (streak >= 3 && todayMins > 0) {
+    return `You're on a ${streak}-day streak. Even on the days you didn't feel like it, you showed up.`
+  }
+  if (avgMins > 0 && todayMins > avgMins * 1.15) {
+    return `You've already studied more today than your typical day this week. That's worth noticing.`
+  }
+  if (weekly.length >= 3 && weekly.every(d => d.total_mins > 0)) {
+    return `You've shown up every single day this week so far. That's not luck — that's a pattern.`
+  }
+  if (streak >= 1) {
+    return `Day ${streak} of your streak. One more session, one more day it holds.`
+  }
+  return `Today's a clean slate. Sit down whenever you're ready — STRËAK's watching, quietly, on your side.`
+}
+
+function DailySentenceBanner({ data }) {
+  const sentence = getDailySentence(data)
+  const streak = data?.streak || 0
+
   return (
     <motion.div className="glass"
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -331,11 +389,10 @@ function DailyQuoteBanner({ streak }) {
         flexWrap: 'wrap', borderLeft: '4px solid var(--primary)'
       }}>
       <div style={{ flex: 1, minWidth: '200px' }}>
-        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '6px', opacity: 0.6 }}>TODAY'S QUOTE</div>
-        <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic', fontWeight: '500' }}>
-          "{quote.text}"
+        <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '6px', opacity: 0.6 }}>STRËAK NOTICED</div>
+        <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.6, fontWeight: '500' }}>
+          {sentence}
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: '700', marginTop: '4px' }}>— {quote.author}</div>
       </div>
       {streak > 0 && (
         <div style={{
@@ -421,8 +478,10 @@ export default function Dashboard() {
   const [showTour, setShowTour] = useState(false)
   const [tourDone, setTourDone] = useState(false)
   const [coldStartDone, setColdStartDone] = useState(false)
+  const [showLateNightNudge, setShowLateNightNudge] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
+  const nudgeShownRef = useRef(false)
   const { requestWakeLock, releaseWakeLock } = useWakeLock()
 
   const fetchDashboard = async () => {
@@ -473,8 +532,6 @@ export default function Dashboard() {
     return () => clearInterval(timerRef.current)
   }, [sessionActive, sessionStart])
 
-  // wake lock — tied directly to sessionActive, so it engages no matter
-  // what actually started the session (manual button or hardware socket event)
   useEffect(() => {
     if (sessionActive) {
       requestWakeLock()
@@ -483,7 +540,6 @@ export default function Dashboard() {
     }
   }, [sessionActive])
 
-  // re-engage wake lock if the tab was backgrounded and comes back mid-session
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && sessionActive) {
@@ -493,6 +549,26 @@ export default function Dashboard() {
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [sessionActive])
+
+  useEffect(() => {
+    if (!sessionActive) {
+      nudgeShownRef.current = false
+      return
+    }
+    const checkLateNight = () => {
+      const hour = new Date().getHours()
+      const isLate = hour >= 23 || hour < 4
+      if (isLate && !nudgeShownRef.current) {
+        setShowLateNightNudge(true)
+        nudgeShownRef.current = true
+      }
+    }
+    checkLateNight()
+    const interval = setInterval(checkLateNight, 60000)
+    return () => clearInterval(interval)
+  }, [sessionActive])
+
+  const dismissLateNightNudge = () => setShowLateNightNudge(false)
 
   const handleTourDone = () => {
     localStorage.setItem(`streak_tour_${user?.user_id}`, 'true')
@@ -567,6 +643,7 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
+      <LateNightNudge show={showLateNightNudge} onDismiss={dismissLateNightNudge} />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* greeting */}
@@ -583,8 +660,8 @@ export default function Dashboard() {
           </p>
         </motion.div>
 
-        {/* quote + streak merged banner */}
-        <DailyQuoteBanner streak={data?.streak || 0} />
+        {/* daily sentence + streak merged banner */}
+        <DailySentenceBanner data={data} />
 
         {/* stat cards — today, aura, this week, upcoming */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '2rem' }}>
