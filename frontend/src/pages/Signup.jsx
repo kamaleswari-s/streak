@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 
-const API = 'http://localhost:5000'
+const API = 'https://streak-backend-823y.onrender.com'
 
 function PasswordStrength({ password }) {
   const getStrength = () => {

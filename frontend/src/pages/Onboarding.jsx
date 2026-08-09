@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 
-const API = 'http://localhost:5000'
+const API = 'https://streak-backend-823y.onrender.com'
 
 const lightThemes = [
   { id: 'lavender_haze', name: 'lavender haze', desc: 'soft purple + gold — the default ✦' },
