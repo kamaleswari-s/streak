@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo
 import bcrypt
 import jwt
 import os
+import ssl
+import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 from functools import wraps
 
@@ -21,6 +23,12 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 JWT_SECRET = os.getenv("JWT_SECRET")
+
+# ── MQTT CONFIG ───────────────────────────────────────────
+MQTT_HOST = "hb67af32.ala.asia-southeast1.emqxsl.com"
+MQTT_PORT = 8883
+MQTT_USER = "streak_esp32"
+MQTT_PASS = os.getenv("MQTT_PASSWORD")
 
 # ── DATABASE ──────────────────────────────────────────────
 def get_db():
@@ -127,7 +135,7 @@ def get_streak(user_id):
 
     return streak
 
-# ── SLEEP PATTERN (late-night flag + rest gap + streak) ───
+# ── SLEEP PATTERN ──────────────────────────────────────────
 def get_sleep_pattern(user_id):
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -190,6 +198,85 @@ def get_sleep_pattern(user_id):
 
 # ── SESSION STATE ─────────────────────────────────────────
 active_sessions = {}
+
+# ── SESSION LOGIC (reusable — called from routes AND from MQTT) ──
+def do_start_session(user_id):
+    if user_id in active_sessions:
+        return {"error": "Session already active"}
+
+    now = datetime.now(IST)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO sessions (user_id, date, start_time) VALUES (%s, %s, %s) RETURNING id",
+        (user_id, now.date().isoformat(), now)
+    )
+    session_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    active_sessions[user_id] = {"session_id": session_id, "start_time": now}
+    socketio.emit(f"session_started_{user_id}", {"start_time": now.isoformat()})
+    return {"status": "started", "session_id": session_id, "start_time": now.isoformat()}
+
+def do_end_session(user_id):
+    if user_id not in active_sessions:
+        return {"error": "No active session"}
+
+    now = datetime.now(IST)
+    session_data = active_sessions[user_id]
+    duration = (now - session_data["start_time"]).total_seconds() / 60
+
+    streak = get_streak(user_id)
+
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    cur.execute("""
+        SELECT COUNT(DISTINCT date) as count FROM sessions
+        WHERE user_id = %s AND date >= %s AND duration_minutes > 0
+    """, (user_id, (datetime.now(IST).date() - timedelta(days=7)).isoformat()))
+    sessions_this_week = cur.fetchone()["count"]
+
+    score = calculate_momentum(duration, sessions_this_week, streak)
+
+    cur.execute("""
+        SELECT AVG(duration_minutes) as avg_dur FROM sessions
+        WHERE user_id = %s AND duration_minutes > 0
+    """, (user_id,))
+    avg_dur = cur.fetchone()["avg_dur"] or 0
+
+    cur.execute("""
+        SELECT COUNT(*) as peak FROM sessions
+        WHERE user_id = %s AND duration_minutes >= 60
+    """, (user_id,))
+    peak_sessions = cur.fetchone()["peak"]
+
+    consistency = 1.0
+    aura = calculate_aura(streak, avg_dur, consistency, peak_sessions)
+
+    cur2 = conn.cursor()
+    cur2.execute("""
+        UPDATE sessions SET end_time=%s, duration_minutes=%s,
+        momentum_score=%s, aura_score=%s WHERE id=%s
+    """, (now, round(duration, 2), score, aura, session_data["session_id"]))
+    conn.commit()
+    cur.close()
+    cur2.close()
+    conn.close()
+
+    del active_sessions[user_id]
+
+    result = {
+        "status": "ended",
+        "duration_minutes": round(duration, 2),
+        "momentum_score": score,
+        "aura_score": aura,
+        "streak": streak
+    }
+    socketio.emit(f"session_ended_{user_id}", result)
+    return result
 
 # ── AUTH ROUTES ───────────────────────────────────────────
 @app.route("/auth/signup", methods=["POST"])
@@ -275,105 +362,18 @@ def onboard():
 
     return jsonify({"status": "onboarded"})
 
-# ── SESSION ROUTES ────────────────────────────────────────
+# ── SESSION ROUTES (now thin wrappers around the shared logic) ──
 @app.route("/session/start", methods=["POST"])
 @token_required
 def start_session():
-    user_id = request.user_id
-    if user_id in active_sessions:
-        return jsonify({"error": "Session already active"}), 400
-
-    now = datetime.now(IST)
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO sessions (user_id, date, start_time) VALUES (%s, %s, %s) RETURNING id",
-        (user_id, now.date().isoformat(), now)
-    )
-    session_id = cur.fetchone()[0]
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    active_sessions[user_id] = {
-        "session_id": session_id,
-        "start_time": now
-    }
-
-    socketio.emit(f"session_started_{user_id}", {"start_time": now.isoformat()})
-    return jsonify({"status": "started", "session_id": session_id, "start_time": now.isoformat()})
+    result = do_start_session(request.user_id)
+    return jsonify(result), (400 if "error" in result else 200)
 
 @app.route("/session/end", methods=["POST"])
 @token_required
 def end_session():
-    user_id = request.user_id
-    if user_id not in active_sessions:
-        return jsonify({"error": "No active session"}), 400
-
-    now = datetime.now(IST)
-    session_data = active_sessions[user_id]
-    duration = (now - session_data["start_time"]).total_seconds() / 60
-
-    streak = get_streak(user_id)
-
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    cur.execute("""
-        SELECT COUNT(DISTINCT date) as count FROM sessions
-        WHERE user_id = %s AND date >= %s AND duration_minutes > 0
-    """, (user_id, (datetime.now(IST).date() - timedelta(days=7)).isoformat()))
-    sessions_this_week = cur.fetchone()["count"]
-
-    score = calculate_momentum(duration, sessions_this_week, streak)
-
-    cur.execute("""
-        SELECT AVG(duration_minutes) as avg_dur FROM sessions
-        WHERE user_id = %s AND duration_minutes > 0
-    """, (user_id,))
-    avg_dur = cur.fetchone()["avg_dur"] or 0
-
-    cur.execute("""
-        SELECT COUNT(*) as total_days
-        FROM (SELECT DISTINCT date FROM sessions WHERE user_id = %s) d
-    """, (user_id,))
-    day_data = cur.fetchone()
-    consistency = 1.0
-
-    cur.execute("""
-        SELECT COUNT(*) as peak FROM sessions
-        WHERE user_id = %s AND duration_minutes >= 60
-    """, (user_id,))
-    peak_sessions = cur.fetchone()["peak"]
-
-    aura = calculate_aura(streak, avg_dur, consistency, peak_sessions)
-
-    cur2 = conn.cursor()
-    cur2.execute("""
-        UPDATE sessions SET end_time=%s, duration_minutes=%s,
-        momentum_score=%s, aura_score=%s WHERE id=%s
-    """, (now, round(duration, 2), score, aura, session_data["session_id"]))
-    conn.commit()
-    cur.close()
-    cur2.close()
-    conn.close()
-
-    del active_sessions[user_id]
-
-    socketio.emit(f"session_ended_{user_id}", {
-        "duration_minutes": round(duration, 2),
-        "momentum_score": score,
-        "aura_score": aura,
-        "streak": streak
-    })
-
-    return jsonify({
-        "status": "ended",
-        "duration_minutes": round(duration, 2),
-        "momentum_score": score,
-        "aura_score": aura,
-        "streak": streak
-    })
+    result = do_end_session(request.user_id)
+    return jsonify(result), (400 if "error" in result else 200)
 
 # ── DASHBOARD ─────────────────────────────────────────────
 @app.route("/dashboard", methods=["GET"])
@@ -598,9 +598,69 @@ def update_settings():
 def health():
     return "OK", 200
 
+# ── MQTT — the other end of the mailroom ──────────────────
+def get_user_id_by_email(email):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row[0] if row else None
+
+def on_mqtt_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("MQTT connected to broker.")
+        client.subscribe("streak/+/presence")
+        client.subscribe("streak/+/phone")
+        client.subscribe("streak/+/break")
+        client.subscribe("streak/+/environment")
+    else:
+        print(f"MQTT connection failed, code {rc}")
+
+def on_mqtt_message(client, userdata, msg):
+    parts = msg.topic.split("/")
+    if len(parts) != 3:
+        return
+    _, email, event_type = parts
+    payload = msg.payload.decode()
+
+    user_id = get_user_id_by_email(email)
+    if user_id is None:
+        print(f"MQTT message from unrecognized email: {email}")
+        return
+
+    print(f"MQTT: {email} -> {event_type}: {payload}")
+
+    if event_type == "presence":
+        if payload == "start":
+            do_start_session(user_id)
+        elif payload == "end":
+            do_end_session(user_id)
+    elif event_type == "break" and payload == "forced":
+        socketio.emit(f"forced_break_{user_id}", {})
+    elif event_type == "environment" and payload == "danger":
+        socketio.emit(f"environment_danger_{user_id}", {})
+    elif event_type == "phone":
+        socketio.emit(f"phone_{payload}_{user_id}", {})
+
+def start_mqtt():
+    if not MQTT_PASS:
+        print("MQTT_PASSWORD not set - skipping MQTT connection.")
+        return
+    client = mqtt.Client()
+    client.username_pw_set(MQTT_USER, MQTT_PASS)
+    client.tls_set(cert_reqs=ssl.CERT_NONE)  # prototype setting, matches the firmware's approach
+    client.tls_insecure_set(True)
+    client.on_connect = on_mqtt_connect
+    client.on_message = on_mqtt_message
+    client.connect(MQTT_HOST, MQTT_PORT, 60)
+    client.loop_start()
+
 # ── RUN ───────────────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
+    start_mqtt()
     print("STRËAK backend running on http://localhost:5000")
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
