@@ -135,7 +135,7 @@ def get_streak(user_id):
 
     return streak
 
-# ── SLEEP PATTERN ──────────────────────────────────────────
+# ── SLEEP PATTERN (late-night flag + rest gap + streak) ───
 def get_sleep_pattern(user_id):
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -362,7 +362,7 @@ def onboard():
 
     return jsonify({"status": "onboarded"})
 
-# ── SESSION ROUTES (now thin wrappers around the shared logic) ──
+# ── SESSION ROUTES (thin wrappers around the shared logic) ──
 @app.route("/session/start", methods=["POST"])
 @token_required
 def start_session():
@@ -440,13 +440,26 @@ def analytics():
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+    # by_hour computed in Python (IST), same method already proven correct
+    # in get_sleep_pattern — fixes the earlier SQL-side timezone issue
     cur.execute("""
-        SELECT EXTRACT(HOUR FROM start_time AT TIME ZONE 'Asia/Kolkata') as hour,
-        COUNT(*) as count, AVG(duration_minutes) as avg_dur
+        SELECT start_time, duration_minutes
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
-        GROUP BY hour ORDER BY count DESC
     """, (user_id,))
-    by_hour = cur.fetchall()
+    raw_sessions = cur.fetchall()
+
+    hour_stats = {}
+    for s in raw_sessions:
+        h = s["start_time"].astimezone(IST).hour
+        if h not in hour_stats:
+            hour_stats[h] = {"count": 0, "total": 0}
+        hour_stats[h]["count"] += 1
+        hour_stats[h]["total"] += s["duration_minutes"]
+
+    by_hour = sorted(
+        [{"hour": h, "count": v["count"], "avg_dur": v["total"] / v["count"]} for h, v in hour_stats.items()],
+        key=lambda x: -x["count"]
+    )
 
     cur.execute("""
         SELECT TO_CHAR(start_time AT TIME ZONE 'Asia/Kolkata', 'Day') as day,
@@ -481,7 +494,7 @@ def analytics():
     sleep_pattern = get_sleep_pattern(user_id)
 
     return jsonify({
-        "by_hour": [dict(r) for r in by_hour],
+        "by_hour": by_hour,
         "by_day": [dict(r) for r in by_day],
         "monthly_trend": [dict(r) for r in monthly],
         "stats": dict(stats),
@@ -650,7 +663,7 @@ def start_mqtt():
         return
     client = mqtt.Client()
     client.username_pw_set(MQTT_USER, MQTT_PASS)
-    client.tls_set(cert_reqs=ssl.CERT_NONE)  # prototype setting, matches the firmware's approach
+    client.tls_set(cert_reqs=ssl.CERT_NONE)
     client.tls_insecure_set(True)
     client.on_connect = on_mqtt_connect
     client.on_message = on_mqtt_message
