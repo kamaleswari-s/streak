@@ -440,26 +440,13 @@ def analytics():
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    # by_hour computed in Python (IST), same method already proven correct
-    # in get_sleep_pattern — fixes the earlier SQL-side timezone issue
     cur.execute("""
-        SELECT start_time, duration_minutes
+        SELECT EXTRACT(HOUR FROM start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') as hour,
+        COUNT(*) as count, AVG(duration_minutes) as avg_dur
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
+        GROUP BY hour ORDER BY count DESC
     """, (user_id,))
-    raw_sessions = cur.fetchall()
-
-    hour_stats = {}
-    for s in raw_sessions:
-        h = s["start_time"].astimezone(IST).hour
-        if h not in hour_stats:
-            hour_stats[h] = {"count": 0, "total": 0}
-        hour_stats[h]["count"] += 1
-        hour_stats[h]["total"] += s["duration_minutes"]
-
-    by_hour = sorted(
-        [{"hour": h, "count": v["count"], "avg_dur": v["total"] / v["count"]} for h, v in hour_stats.items()],
-        key=lambda x: -x["count"]
-    )
+    by_hour = cur.fetchall()
 
     cur.execute("""
         SELECT TO_CHAR(start_time AT TIME ZONE 'Asia/Kolkata', 'Day') as day,
@@ -494,7 +481,7 @@ def analytics():
     sleep_pattern = get_sleep_pattern(user_id)
 
     return jsonify({
-        "by_hour": by_hour,
+        "by_hour": [dict(r) for r in by_hour],
         "by_day": [dict(r) for r in by_day],
         "monthly_trend": [dict(r) for r in monthly],
         "stats": dict(stats),
