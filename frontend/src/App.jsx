@@ -12,6 +12,7 @@ import Leaderboard from './pages/Leaderboard'
 import Device from './pages/Device'
 import Settings from './pages/Settings'
 import Calendar from './pages/Calendar'
+import OledPopupDemo from './pages/OledPopupDemo'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -41,6 +42,7 @@ function AppRoutes() {
       <Route path="/device" element={<ProtectedRoute><Device /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+      <Route path="/oled-demo" element={<ProtectedRoute><OledPopupDemo /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
