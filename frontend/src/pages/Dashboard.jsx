@@ -66,6 +66,67 @@ function MoonIcon() {
   )
 }
 
+function LEDIcon({ ledName }) {
+  const colors = { white: '#ffffff', yellow: '#EF9F27', blue: '#4A90D9', green: '#639922', red: '#e04545', off: '#555555' }
+  return <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: colors[ledName] || '#555', display: 'inline-block' }} />
+}
+
+// live OLED mirror — small persistent corner card, auto-expands during
+// settle-in or an active alert, collapses to just a colored dot otherwise
+function OledStatusPopup({ data }) {
+  if (!data) return null
+  const isSettling = data.session?.startsWith('getting ready')
+  const isAlert = data.phoneAlerted || data.aqiAlerted
+  const expanded = isSettling || isAlert
+
+  return (
+    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 997 }}>
+      <AnimatePresence mode="wait">
+        {expanded ? (
+          <motion.div key="popup"
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+            className="glass"
+            style={{
+              width: '260px', padding: '1.25rem',
+              borderLeft: `4px solid ${isAlert ? 'var(--accent)' : 'var(--primary)'}`
+            }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.6, marginBottom: '8px', letterSpacing: '1px' }}>
+              STRËAK LIVE
+            </div>
+            <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '16px', color: 'var(--primary)', marginBottom: '10px' }}>
+              {data.session}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+              <div>ir: {data.ir}  pir: {data.pir}</div>
+              <div>gas value: {data.gas}</div>
+              <div>temp: {data.temp}  hum: {data.hum}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                led: <LEDIcon ledName={data.led} /> {data.led}
+              </div>
+              <div>speaker: {data.speaker}</div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key="icon"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            whileHover={{ scale: 1.08 }}
+            className="glass"
+            style={{
+              width: '48px', height: '48px', borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+            }}>
+            <LEDIcon ledName={data.led} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 function LateNightNudge({ show, onDismiss }) {
   return (
     <AnimatePresence>
@@ -102,8 +163,6 @@ function LateNightNudge({ show, onDismiss }) {
   )
 }
 
-// full-screen pause countdown — dims the real dashboard behind it,
-// ring depletes live, stays open through completion until dismissed
 function ResumeAlarmOverlay({ pausedUntil, pauseTotalMs, onDismiss }) {
   const [remainingMs, setRemainingMs] = useState(pausedUntil ? pausedUntil - Date.now() : 0)
   const [isDone, setIsDone] = useState(false)
@@ -143,7 +202,8 @@ function ResumeAlarmOverlay({ pausedUntil, pauseTotalMs, onDismiss }) {
   const circumference = 2 * Math.PI * 85
   const offset = circumference * progress
 
-  const showHours = totalSec >= 3600
+  const totalSecInt = totalSec
+  const showHours = totalSecInt >= 3600
   const displayStr = showHours
     ? `${String(Math.floor(remainingSec / 3600)).padStart(2, '0')}:${String(Math.floor((remainingSec % 3600) / 60)).padStart(2, '0')}`
     : `${String(Math.floor(remainingSec / 60)).padStart(2, '0')}:${String(Math.floor(remainingSec % 60)).padStart(2, '0')}`
@@ -178,7 +238,7 @@ function ResumeAlarmOverlay({ pausedUntil, pauseTotalMs, onDismiss }) {
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'var(--font-pixel)', fontSize: '32px', color: 'var(--text-primary)'
           }}>
-            {isDone ? (showHours ? '00:00' : '00:00') : displayStr}
+            {isDone ? '00:00' : displayStr}
           </div>
         </div>
         {isDone && (
@@ -302,37 +362,6 @@ function ColdStart({ onEnter }) {
         textAlign: 'center', padding: '4rem 2rem',
         position: 'relative', overflow: 'hidden'
       }}>
-      {[...Array(8)].map((_, i) => (
-        <motion.div key={i}
-          animate={{ y: [0, -24, 0], opacity: [0, 0.35, 0], x: [0, (i % 2 === 0 ? 12 : -12), 0] }}
-          transition={{ duration: 4 + i * 0.6, repeat: Infinity, delay: i * 0.6 }}
-          style={{
-            position: 'absolute',
-            width: i % 3 === 0 ? '10px' : '6px', height: i % 3 === 0 ? '10px' : '6px',
-            borderRadius: '50%',
-            background: i % 2 === 0 ? 'var(--primary)' : 'var(--accent)',
-            left: `${10 + i * 10}%`, top: `${20 + (i % 4) * 18}%`, pointerEvents: 'none'
-          }} />
-      ))}
-
-      <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
-        <svg width="180" height="180" viewBox="0 0 100 100">
-          <motion.circle cx="50" cy="8" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity }} />
-          <motion.circle cx="73" cy="15" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 0.5 }} />
-          <motion.circle cx="27" cy="15" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 1 }} />
-          <motion.circle cx="82" cy="38" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 1.5 }} />
-          <motion.circle cx="18" cy="38" r="2.5" animate={{ opacity: [0.1, 0.3, 0.1], fill: 'var(--border)' }} transition={{ duration: 3, repeat: Infinity, delay: 2 }} />
-          <rect x="20" y="62" width="60" height="7" rx="3.5" fill="var(--primary)" opacity="0.2" />
-          <rect x="24" y="69" width="6" height="16" rx="3" fill="var(--primary)" opacity="0.2" />
-          <rect x="70" y="69" width="6" height="16" rx="3" fill="var(--primary)" opacity="0.2" />
-          <rect x="30" y="44" width="40" height="20" rx="5" fill="var(--primary-light)" opacity="0.2" />
-          <rect x="34" y="48" width="32" height="12" rx="3" fill="white" opacity="0.15" />
-          <motion.circle cx="50" cy="38" r="6" fill="var(--border)" animate={{ opacity: [0.2, 0.5, 0.2], r: [5, 7, 5] }} transition={{ duration: 3, repeat: Infinity }} />
-          <circle cx="50" cy="38" r="2.5" fill="white" opacity="0.3" />
-        </svg>
-      </motion.div>
-
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.9 }}
         style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(28px, 5vw, 52px)', color: 'var(--primary)', marginBottom: '1.2rem', lineHeight: 1.2, position: 'relative', zIndex: 1 }}>
         your desk is quiet.
@@ -343,28 +372,16 @@ function ColdStart({ onEnter }) {
         you already study hard. you just have nothing to show for it.
       </motion.div>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4, duration: 0.8 }}
-        style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.5, marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
-        explore your dashboard. set up a session. start your streak.
-      </motion.div>
-
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 1.8, duration: 0.6, type: 'spring', stiffness: 200 }}
-        style={{ position: 'relative', zIndex: 1 }}>
+        style={{ position: 'relative', zIndex: 1, marginTop: '2rem' }}>
         <motion.button className="btn-primary"
-          animate={{ boxShadow: ['0 0 0px var(--primary)', '0 0 40px var(--primary)', '0 0 0px var(--primary)'] }}
-          transition={{ duration: 2.5, repeat: Infinity }}
           whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.96 }}
           onClick={onEnter}
           style={{ padding: '20px 52px', fontSize: '20px', letterSpacing: '1px' }}>
           enter dashboard →
         </motion.button>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4, duration: 1 }}
-        style={{ marginTop: '2rem', fontSize: '14px', color: 'var(--text-primary)', opacity: 0.3, position: 'relative', zIndex: 1 }}>
-        your journey starts when you are ready
       </motion.div>
     </motion.div>
   )
@@ -530,7 +547,7 @@ function UpcomingSessionsCard({ navigate }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {events.map((event, i) => {
+          {events.map((event) => {
             const isToday = event.date === todayStr
             return (
               <div key={event.id} style={{
@@ -595,6 +612,7 @@ export default function Dashboard() {
   const [resumeDurationMin, setResumeDurationMin] = useState(30)
   const [pausedUntil, setPausedUntil] = useState(null)
   const [pauseTotalMs, setPauseTotalMs] = useState(0)
+  const [oledData, setOledData] = useState({ session: 'standby', ir: 0, pir: 0, gas: 0, temp: 0, hum: 0, led: 'white', speaker: '-', phoneAlerted: false, aqiAlerted: false })
   const socketRef = useRef(null)
   const timerRef = useRef(null)
   const nudgeShownRef = useRef(false)
@@ -638,6 +656,14 @@ export default function Dashboard() {
       setElapsed(0)
       fetchDashboard()
     })
+    // real device says "I'm here" — dashboard just needs to be open and listening
+    socketRef.current.on(`tap_${user?.user_id}`, () => {
+      console.log('STRËAK tap received')
+    })
+    // continuous live mirror of the OLED, straight from the device over MQTT
+    socketRef.current.on(`status_${user?.user_id}`, (statusData) => {
+      setOledData(statusData)
+    })
     return () => socketRef.current?.disconnect()
   }, [])
 
@@ -648,9 +674,8 @@ export default function Dashboard() {
     return () => clearInterval(timerRef.current)
   }, [sessionActive, sessionStart])
 
-  // wake lock — covers an active session AND a pending pause countdown
   useEffect(() => {
-    const pauseActive = pausedUntil !== null
+    const pauseActive = pausedUntil && pausedUntil > Date.now()
     if (sessionActive || pauseActive) {
       requestWakeLock()
     } else {
@@ -660,7 +685,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handleVisibility = () => {
-      const pauseActive = pausedUntil !== null
+      const pauseActive = pausedUntil && pausedUntil > Date.now()
       if (document.visibilityState === 'visible' && (sessionActive || pauseActive)) {
         requestWakeLock()
       }
@@ -793,9 +818,9 @@ export default function Dashboard() {
       <Navbar />
       <LateNightNudge show={showLateNightNudge} onDismiss={dismissLateNightNudge} />
       <ResumeAlarmOverlay pausedUntil={pausedUntil} pauseTotalMs={pauseTotalMs} onDismiss={dismissResumeAlarm} />
+      <OledStatusPopup data={oledData} />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
-        {/* greeting */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '1.5rem' }}>
           <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 36px)', color: 'var(--primary)', marginBottom: '6px' }}>
             {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
@@ -809,10 +834,8 @@ export default function Dashboard() {
           </p>
         </motion.div>
 
-        {/* daily sentence + streak merged banner */}
         <DailySentenceBanner data={data} />
 
-        {/* stat cards — today, aura, this week, upcoming */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '2rem' }}>
           <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>
             <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>TODAY</div>
@@ -835,7 +858,6 @@ export default function Dashboard() {
           <UpcomingSessionsCard navigate={navigate} />
         </div>
 
-        {/* session + device + aura — original 3 column layout */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
           <motion.div className="glass" style={{ padding: '2rem' }}>
             <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '2px', marginBottom: '1.5rem', opacity: 0.7 }}>CURRENT SESSION</div>
@@ -916,6 +938,12 @@ export default function Dashboard() {
                     style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
                     stand up
                   </motion.button>
+                </div>
+              )}
+
+              {pausedUntil && !sessionActive && (
+                <div style={{ fontSize: '12px', color: 'var(--primary)', marginTop: '1rem', fontWeight: '600' }}>
+                  back at {new Date(pausedUntil).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}
                 </div>
               )}
 
