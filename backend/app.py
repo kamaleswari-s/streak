@@ -9,6 +9,7 @@ import bcrypt
 import jwt
 import os
 import ssl
+import json
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 from functools import wraps
@@ -135,7 +136,7 @@ def get_streak(user_id):
 
     return streak
 
-# ── SLEEP PATTERN (late-night flag + rest gap + streak) ───
+# ── SLEEP PATTERN ──────────────────────────────────────────
 def get_sleep_pattern(user_id):
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -362,7 +363,7 @@ def onboard():
 
     return jsonify({"status": "onboarded"})
 
-# ── SESSION ROUTES (thin wrappers around the shared logic) ──
+# ── SESSION ROUTES ────────────────────────────────────────
 @app.route("/session/start", methods=["POST"])
 @token_required
 def start_session():
@@ -445,9 +446,6 @@ def analytics():
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
     """, (user_id,))
     raw_sessions = cur.fetchall()
-
-    for s in raw_sessions:
-        print(f"DEBUG raw={repr(s['start_time'])} astimezone_ist_hour={s['start_time'].astimezone(IST).hour}")
 
     hour_stats = {}
     for s in raw_sessions:
@@ -612,7 +610,7 @@ def update_settings():
 def health():
     return "OK", 200
 
-# ── MQTT — the other end of the mailroom ──────────────────
+# ── MQTT — now handles tap + live status too ──────────────
 def get_user_id_by_email(email):
     conn = get_db()
     cur = conn.cursor()
@@ -629,6 +627,8 @@ def on_mqtt_connect(client, userdata, flags, rc):
         client.subscribe("streak/+/phone")
         client.subscribe("streak/+/break")
         client.subscribe("streak/+/environment")
+        client.subscribe("streak/+/tap")
+        client.subscribe("streak/+/status")
     else:
         print(f"MQTT connection failed, code {rc}")
 
@@ -644,8 +644,6 @@ def on_mqtt_message(client, userdata, msg):
         print(f"MQTT message from unrecognized email: {email}")
         return
 
-    print(f"MQTT: {email} -> {event_type}: {payload}")
-
     if event_type == "presence":
         if payload == "start":
             do_start_session(user_id)
@@ -657,6 +655,14 @@ def on_mqtt_message(client, userdata, msg):
         socketio.emit(f"environment_danger_{user_id}", {})
     elif event_type == "phone":
         socketio.emit(f"phone_{payload}_{user_id}", {})
+    elif event_type == "tap":
+        socketio.emit(f"tap_{user_id}", {})
+    elif event_type == "status":
+        try:
+            status_data = json.loads(payload)
+            socketio.emit(f"status_{user_id}", status_data)
+        except:
+            pass
 
 def start_mqtt():
     if not MQTT_PASS:
