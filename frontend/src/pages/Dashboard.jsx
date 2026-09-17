@@ -127,6 +127,37 @@ function OledStatusPopup({ data }) {
   )
 }
 
+// appears once the 60-second settle-in (started by your tap) finishes.
+// clicking Start calls the exact same startSession() the manual button uses.
+function ReadyToStartPopup({ visible, onStart }) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 10 }}
+          className="glass"
+          style={{
+            position: 'fixed', bottom: '24px', right: '24px', zIndex: 998,
+            width: '260px', padding: '1.25rem', textAlign: 'center',
+            borderLeft: '4px solid var(--primary)'
+          }}>
+          <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '16px', color: 'var(--primary)', marginBottom: '10px' }}>
+            ready to start?
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+            you've settled in — start the session whenever you are.
+          </div>
+          <button className="btn-primary" onClick={onStart} style={{ width: '100%' }}>
+            start session
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 function LateNightNudge({ show, onDismiss }) {
   return (
     <AnimatePresence>
@@ -613,6 +644,7 @@ export default function Dashboard() {
   const [pausedUntil, setPausedUntil] = useState(null)
   const [pauseTotalMs, setPauseTotalMs] = useState(0)
   const [oledData, setOledData] = useState({ session: 'standby', ir: 0, pir: 0, gas: 0, temp: 0, hum: 0, led: 'white', speaker: '-', phoneAlerted: false, aqiAlerted: false })
+  const [showReadyPopup, setShowReadyPopup] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
   const nudgeShownRef = useRef(false)
@@ -656,9 +688,11 @@ export default function Dashboard() {
       setElapsed(0)
       fetchDashboard()
     })
-    // real device says "I'm here" — dashboard just needs to be open and listening
+    // real device says "I'm here" - starts the 60-second settle-in countdown
+    // on the dashboard's own clock, ending in the Ready to Start popup
     socketRef.current.on(`tap_${user?.user_id}`, () => {
-      console.log('STRËAK tap received')
+      console.log('STRËAK tap received - settle-in started')
+      setTimeout(() => setShowReadyPopup(true), 60000)
     })
     // continuous live mirror of the OLED, straight from the device over MQTT
     socketRef.current.on(`status_${user?.user_id}`, (statusData) => {
@@ -794,6 +828,11 @@ export default function Dashboard() {
     endSession()
   }
 
+  const handleReadyStart = () => {
+    setShowReadyPopup(false)
+    startSession()
+  }
+
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
       <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }}
@@ -819,6 +858,7 @@ export default function Dashboard() {
       <LateNightNudge show={showLateNightNudge} onDismiss={dismissLateNightNudge} />
       <ResumeAlarmOverlay pausedUntil={pausedUntil} pauseTotalMs={pauseTotalMs} onDismiss={dismissResumeAlarm} />
       <OledStatusPopup data={oledData} />
+      <ReadyToStartPopup visible={showReadyPopup} onStart={handleReadyStart} />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '1.5rem' }}>
