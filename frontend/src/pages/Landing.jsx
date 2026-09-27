@@ -16,8 +16,8 @@ const features = [
         <circle cx="16" cy="10" r="2" fill="var(--accent)" opacity="0.5"/>
       </svg>
     ),
-    title: 'zero interaction',
-    desc: 'Sit down. That is it. No app to open, no timer to start. STRËAK detects your presence automatically using PIR and IR sensors. The session starts itself.'
+    title: 'minimal interaction',
+    desc: "Sit down and STRËAK's PIR sensor picks up your presence right away. One tap confirms you're actually ready, giving you a real sixty-second window to settle in before anything starts. No typing, no manual timer, just a tap and a moment to breathe before you begin."
   },
   {
     icon: (
@@ -56,7 +56,7 @@ const features = [
       </svg>
     ),
     title: 'phone detection',
-    desc: 'STRËAK detects if your phone lands on the desk mid-session. Timer pauses automatically. A 60-second grace period handles emergency calls. Zero surveillance — distance only.'
+    desc: 'STRËAK detects if your phone lands on the desk mid-session. A brief confirmation window filters out accidental movement, then the timer pauses automatically until the phone is moved away. Zero surveillance — distance only.'
   },
   {
     icon: (
@@ -83,7 +83,7 @@ const features = [
       </svg>
     ),
     title: 'full iot architecture',
-    desc: 'Sensing → MQTT → intelligence → actuation. A complete closed-loop system. ESP32 edge processing, Mosquitto broker, Flask backend, PostgreSQL, React dashboard — all connected.'
+    desc: 'Sensing → MQTT → on-device AI → actuation. A complete closed-loop system. ESP32 edge processing with a trained anomaly detection model, EMQX Cloud broker, Flask backend, PostgreSQL, React dashboard — all connected.'
   }
 ]
 
@@ -291,7 +291,6 @@ export default function Landing() {
           You already study hard. You just have nothing to show for it. STRËAK changes that — it sits on your desk, silently tracks every session, and turns your consistency into something you can actually see and feel proud of.
         </motion.p>
 
-        {/* SINGLE CTA — just one button in hero */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.9 }}
           style={{ marginTop: '3rem', position: 'relative', zIndex: 1 }}>
@@ -341,7 +340,7 @@ export default function Landing() {
           </motion.h2>
           <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
             style={{ textAlign: 'center', color: 'var(--text-primary)', marginBottom: '4rem', fontSize: '18px', opacity: 0.8 }}>
-            three steps. zero effort from you.
+            three steps. barely any effort from you.
           </motion.p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
@@ -357,7 +356,7 @@ export default function Landing() {
                   </svg>
                 ),
                 step: '01', title: 'sit down',
-                desc: 'PIR and IR sensors detect your presence automatically. No buttons. No apps. Just sit at your desk and the system starts itself.'
+                desc: 'PIR senses you sitting down. One tap confirms you\'re ready, then a real sixty-second window to settle in before your session begins.'
               },
               {
                 icon: (
@@ -471,13 +470,14 @@ export default function Landing() {
             5 LEDs. one lights up at a time. you always know where you stand.
           </motion.p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
             {leds.map((led, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.08 }}
                 whileHover={{ scale: 1.03 }}
                 style={{
+                  flex: '1 1 280px', maxWidth: '340px',
                   padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '16px',
                   background: 'var(--surface)',
                   border: `2px solid ${led.color === '#ffffff' ? 'var(--border)' : led.color}`,

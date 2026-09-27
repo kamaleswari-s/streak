@@ -57,9 +57,9 @@ export default function Onboarding() {
         device_name: deviceName || `${user?.name}'s STRËAK Device`
       }, { headers: { Authorization: `Bearer ${token}` } })
       updateTheme(selectedTheme)
-      navigate('/dashboard')
+      navigate('/dashboard', { state: { justOnboarded: true } })
     } catch (err) {
-      navigate('/dashboard')
+      navigate('/dashboard', { state: { justOnboarded: true } })
     }
     setLoading(false)
   }
@@ -72,7 +72,6 @@ export default function Onboarding() {
       subtitle: 'this is how strëak looks every time you open it. you can always change it later.',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* mode toggle */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
             {['light', 'dark'].map(mode => (
               <button key={mode} onClick={() => setThemeMode(mode)}
@@ -88,7 +87,6 @@ export default function Onboarding() {
             ))}
           </div>
 
-          {/* theme list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '360px', overflowY: 'auto', paddingRight: '4px' }}>
             <AnimatePresence mode="wait">
               <motion.div key={themeMode}
@@ -229,7 +227,6 @@ export default function Onboarding() {
       padding: '2rem', position: 'relative', overflow: 'hidden',
       transition: 'background 0.4s ease'
     }}>
-      {/* background blobs */}
       <div style={{
         position: 'absolute', top: '-15%', left: '-10%',
         width: '600px', height: '600px', background: 'var(--primary-light)',
@@ -248,7 +245,6 @@ export default function Onboarding() {
         animate={{ opacity: 1, y: 0 }}
         style={{ width: '100%', maxWidth: '560px', position: 'relative', zIndex: 1 }}
       >
-        {/* header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -263,7 +259,6 @@ export default function Onboarding() {
             {step === 2 && 'one last thing'}
           </div>
 
-          {/* step dots */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
             {steps.map((_, i) => (
               <motion.div key={i}
@@ -277,7 +272,6 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* card */}
         <div className="glass" style={{ padding: '2rem' }}>
           <AnimatePresence mode="wait">
             <motion.div key={step}
@@ -295,7 +289,6 @@ export default function Onboarding() {
             </motion.div>
           </AnimatePresence>
 
-          {/* navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
             {step > 0 ? (
               <motion.button className="btn-outline"

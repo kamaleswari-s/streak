@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import io from 'socket.io-client'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 import API from '../config'
 import useWakeLock from '../useWakeLock'
@@ -71,8 +71,6 @@ function LEDIcon({ ledName }) {
   return <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: colors[ledName] || '#555', display: 'inline-block' }} />
 }
 
-// live OLED mirror — small persistent corner card, auto-expands during
-// settle-in or an active alert, collapses to just a colored dot otherwise
 function OledStatusPopup({ data }) {
   if (!data) return null
   const isSettling = data.session?.startsWith('getting ready')
@@ -127,8 +125,6 @@ function OledStatusPopup({ data }) {
   )
 }
 
-// appears once the 60-second settle-in (started by your tap) finishes.
-// clicking Start calls the exact same startSession() the manual button uses.
 function ReadyToStartPopup({ visible, onStart }) {
   return (
     <AnimatePresence>
@@ -628,6 +624,7 @@ function playResumeChime() {
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [data, setData] = useState(null)
   const [sessionActive, setSessionActive] = useState(false)
   const [sessionStart, setSessionStart] = useState(null)
@@ -669,10 +666,9 @@ export default function Dashboard() {
   useEffect(() => {
     const currentTheme = user?.theme || 'neon_noir'
     document.documentElement.setAttribute('data-theme', currentTheme)
-    const tourSeen = localStorage.getItem(`streak_tour_${user?.user_id}`)
-    const coldDone = localStorage.getItem(`streak_cold_${user?.user_id}`)
-    if (!tourSeen) setShowTour(true)
+    if (location.state?.justOnboarded) setShowTour(true)
     else setTourDone(true)
+    const coldDone = localStorage.getItem(`streak_cold_${user?.user_id}`)
     if (coldDone) setColdStartDone(true)
     fetchDashboard()
     socketRef.current = io(API)
@@ -688,13 +684,10 @@ export default function Dashboard() {
       setElapsed(0)
       fetchDashboard()
     })
-    // real device says "I'm here" - starts the 60-second settle-in countdown
-    // on the dashboard's own clock, ending in the Ready to Start popup
     socketRef.current.on(`tap_${user?.user_id}`, () => {
       console.log('STRËAK tap received - settle-in started')
       setTimeout(() => setShowReadyPopup(true), 60000)
     })
-    // continuous live mirror of the OLED, straight from the device over MQTT
     socketRef.current.on(`status_${user?.user_id}`, (statusData) => {
       setOledData(statusData)
     })
@@ -753,7 +746,6 @@ export default function Dashboard() {
   }
 
   const handleTourDone = () => {
-    localStorage.setItem(`streak_tour_${user?.user_id}`, 'true')
     setShowTour(false)
     setTourDone(true)
   }
