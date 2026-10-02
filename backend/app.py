@@ -610,7 +610,7 @@ def update_settings():
 def health():
     return "OK", 200
 
-# ── MQTT — now handles tap + live status too ──────────────
+# ── MQTT — now handles tap, live status, and AI anomaly suggestions too ──
 def get_user_id_by_email(email):
     conn = get_db()
     cur = conn.cursor()
@@ -629,6 +629,7 @@ def on_mqtt_connect(client, userdata, flags, rc):
         client.subscribe("streak/+/environment")
         client.subscribe("streak/+/tap")
         client.subscribe("streak/+/status")
+        client.subscribe("streak/+/anomaly")
     else:
         print(f"MQTT connection failed, code {rc}")
 
@@ -657,6 +658,8 @@ def on_mqtt_message(client, userdata, msg):
         socketio.emit(f"phone_{payload}_{user_id}", {})
     elif event_type == "tap":
         socketio.emit(f"tap_{user_id}", {})
+    elif event_type == "anomaly":
+        socketio.emit(f"anomaly_{user_id}", {"suggested": True})
     elif event_type == "status":
         try:
             status_data = json.loads(payload)

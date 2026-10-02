@@ -682,6 +682,7 @@ export default function Dashboard() {
       setSessionActive(false)
       setSessionStart(null)
       setElapsed(0)
+      setShowStandUpOptions(true)
       fetchDashboard()
     })
     socketRef.current.on(`tap_${user?.user_id}`, () => {
