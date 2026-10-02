@@ -1,8 +1,9 @@
 /*
   STRËAK - Study Companion Firmware
-  PIR-only session control, IR as tap sensor, WiFi + MQTT with
-  proper reconnect handling, voice lines, environment monitoring,
-  and the trained on-device anomaly detection model.
+  PIR-only session start, IR as tap sensor (also stops an active
+  session on touch), WiFi + MQTT with proper reconnect handling,
+  voice lines, environment monitoring, and the trained on-device
+  anomaly detection model.
 */
 
 #include <Wire.h>
@@ -16,8 +17,8 @@
 #include <PubSubClient.h>
 #include <The_Tell_inferencing.h>
 
-const char* WIFI_SSID     = "JioFiber-t9XDm";
-const char* WIFI_PASSWORD = "F6mgeaDgAgmtHUym";
+const char* WIFI_SSID     = "Kamale's_Moto fusion";
+const char* WIFI_PASSWORD = "Kamale6485";
 const char* DEVICE_OWNER_EMAIL = "kamaleswari0615@gmail.com";
 
 const char* MQTT_HOST = "hb67af32.ala.asia-southeast1.emqxsl.com";
@@ -236,6 +237,10 @@ void loop() {
   if (liveIR && !lastIrState) {
     publishEvent(topicTap, "tap");
     Serial.println("Tap detected - sent I'm here signal.");
+    if (sessionActive) {
+      Serial.println("Tap during active session - ending session.");
+      endSession();
+    }
   }
   lastIrState = liveIR;
 
@@ -295,7 +300,7 @@ unsigned long getElapsedSec() { return (millis() - sessionStartMillis - totalPau
 void runIntroSequence() {
   unsigned long sinceStep = millis() - introStartMillis;
   if (introStep == 1 && sinceStep >= 15000) { sayVoice(3); introStep = 2; introStartMillis = millis(); }
-  else if (introStep == 2 && sinceStep >= 15000) { sayVoice(4); introStep = 3; introStartMillis = millis(); }
+  else if (introStep == 2 && sinceStep >= 15000) { sayVoice(4); introStep = 3; introStartMillis = millis(); publishEvent(topicBreak, "forced"); }
   else if (introStep == 3 && sinceStep >= 15000) { sayVoice(5); introStep = 4; }
 }
 
