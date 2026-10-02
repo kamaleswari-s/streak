@@ -72,10 +72,11 @@ function LEDIcon({ ledName }) {
 }
 
 function OledStatusPopup({ data }) {
+  const [manuallyOpen, setManuallyOpen] = useState(false)
   if (!data) return null
   const isSettling = data.session?.startsWith('getting ready')
   const isAlert = data.phoneAlerted || data.aqiAlerted
-  const expanded = isSettling || isAlert
+  const expanded = isSettling || isAlert || manuallyOpen
 
   return (
     <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 997 }}>
@@ -86,8 +87,9 @@ function OledStatusPopup({ data }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 10 }}
             className="glass"
+            onClick={() => setManuallyOpen(false)}
             style={{
-              width: '260px', padding: '1.25rem',
+              width: '260px', padding: '1.25rem', cursor: 'pointer',
               borderLeft: `4px solid ${isAlert ? 'var(--accent)' : 'var(--primary)'}`
             }}>
             <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.6, marginBottom: '8px', letterSpacing: '1px' }}>
@@ -112,7 +114,9 @@ function OledStatusPopup({ data }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.95 }}
             className="glass"
+            onClick={() => setManuallyOpen(true)}
             style={{
               width: '48px', height: '48px', borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
