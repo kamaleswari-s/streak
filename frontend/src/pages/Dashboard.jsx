@@ -794,16 +794,16 @@ export default function Dashboard() {
     }
   }
 
-  const endSession = async () => {
-    if (!sessionActive) return
-    setSessionActive(false)
-    setSessionStart(null)
-    setElapsed(0)
-    try {
-      await axios.post(`${API}/session/end`, {}, { headers: { Authorization: `Bearer ${token}` } })
-      fetchDashboard()
-    } catch (err) { console.error(err) }
-  }
+  const endSession = async (reason) => {
+  if (!sessionActive) return
+  setSessionActive(false)
+  setSessionStart(null)
+  setElapsed(0)
+  try {
+    await axios.post(`${API}/session/end`, { reason }, { headers: { Authorization: `Bearer ${token}` } })
+    fetchDashboard()
+  } catch (err) { console.error(err) }
+}
 
   const getFinalReason = () => {
     if (selectedReason === 'Other') return customReason.trim() || 'Other'

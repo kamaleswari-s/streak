@@ -65,6 +65,7 @@ def init_db():
             aura_score REAL DEFAULT 0
         )
     """)
+    cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS stand_up_reason TEXT")
     conn.commit()
     cur.close()
     conn.close()
@@ -221,7 +222,7 @@ def do_start_session(user_id):
     socketio.emit(f"session_started_{user_id}", {"start_time": now.isoformat()})
     return {"status": "started", "session_id": session_id, "start_time": now.isoformat()}
 
-def do_end_session(user_id):
+def do_end_session(user_id, reason=None):
     if user_id not in active_sessions:
         return {"error": "No active session"}
 
@@ -260,8 +261,8 @@ def do_end_session(user_id):
     cur2 = conn.cursor()
     cur2.execute("""
         UPDATE sessions SET end_time=%s, duration_minutes=%s,
-        momentum_score=%s, aura_score=%s WHERE id=%s
-    """, (now, round(duration, 2), score, aura, session_data["session_id"]))
+        momentum_score=%s, aura_score=%s, stand_up_reason=%s WHERE id=%s
+    """, (now, round(duration, 2), score, aura, reason, session_data["session_id"]))
     conn.commit()
     cur.close()
     cur2.close()
@@ -373,7 +374,9 @@ def start_session():
 @app.route("/session/end", methods=["POST"])
 @token_required
 def end_session():
-    result = do_end_session(request.user_id)
+    data = request.json or {}
+    reason = data.get("reason")
+    result = do_end_session(request.user_id, reason)
     return jsonify(result), (400 if "error" in result else 200)
 
 # ── DASHBOARD ─────────────────────────────────────────────
@@ -522,7 +525,7 @@ def history():
         SELECT id, date,
         to_char(start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as start_time,
         to_char(end_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as end_time,
-        duration_minutes, momentum_score, aura_score
+        duration_minutes, momentum_score, aura_score, stand_up_reason
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         AND date >= %s ORDER BY start_time DESC
     """, (user_id, since))
@@ -610,7 +613,7 @@ def update_settings():
 def health():
     return "OK", 200
 
-# ── MQTT — now handles tap, live status, and AI anomaly suggestions too ──
+# ── MQTT — handles tap, live status, and AI anomaly suggestions too ──
 def get_user_id_by_email(email):
     conn = get_db()
     cur = conn.cursor()
@@ -649,7 +652,7 @@ def on_mqtt_message(client, userdata, msg):
         if payload == "start":
             do_start_session(user_id)
         elif payload == "end":
-            do_end_session(user_id)
+            do_end_session(user_id, reason="Stood up (sensor detected)")
     elif event_type == "break" and payload == "forced":
         socketio.emit(f"forced_break_{user_id}", {})
     elif event_type == "environment" and payload == "danger":
