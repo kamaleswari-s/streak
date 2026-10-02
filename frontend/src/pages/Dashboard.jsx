@@ -625,6 +625,8 @@ function playResumeChime() {
   }
 }
 
+const standUpReasons = ['Bathroom', 'Food / Water', 'Phone call', 'Tired', 'Distracted', 'Other']
+
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
   const navigate = useNavigate()
@@ -639,6 +641,8 @@ export default function Dashboard() {
   const [coldStartDone, setColdStartDone] = useState(false)
   const [showLateNightNudge, setShowLateNightNudge] = useState(false)
   const [showStandUpOptions, setShowStandUpOptions] = useState(false)
+  const [selectedReason, setSelectedReason] = useState('')
+  const [customReason, setCustomReason] = useState('')
   const [resumeMode, setResumeMode] = useState('time')
   const [resumeTimeInput, setResumeTimeInput] = useState('16:30')
   const [resumeDurationMin, setResumeDurationMin] = useState(30)
@@ -748,6 +752,7 @@ export default function Dashboard() {
   const dismissResumeAlarm = () => {
     setPausedUntil(null)
     setPauseTotalMs(0)
+    setTimeout(() => setShowReadyPopup(true), 60000)
   }
 
   const handleTourDone = () => {
@@ -800,12 +805,27 @@ export default function Dashboard() {
     } catch (err) { console.error(err) }
   }
 
+  const getFinalReason = () => {
+    if (selectedReason === 'Other') return customReason.trim() || 'Other'
+    return selectedReason || 'Not specified'
+  }
+
+  const resetReason = () => {
+    setSelectedReason('')
+    setCustomReason('')
+  }
+
   const handleJustStop = () => {
+    const reason = getFinalReason()
+    console.log('STRËAK stand-up reason:', reason)
     setShowStandUpOptions(false)
+    resetReason()
     endSession()
   }
 
   const handleStartResumeTimer = () => {
+    const reason = getFinalReason()
+    console.log('STRËAK stand-up reason:', reason)
     let targetMs
     if (resumeMode === 'time') {
       const [h, m] = resumeTimeInput.split(':').map(Number)
@@ -820,6 +840,7 @@ export default function Dashboard() {
       Notification.requestPermission()
     }
     setShowStandUpOptions(false)
+    resetReason()
     setPauseTotalMs(targetMs - Date.now())
     setPausedUntil(targetMs)
     endSession()
@@ -914,6 +935,30 @@ export default function Dashboard() {
 
               {showStandUpOptions ? (
                 <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', opacity: 0.7, marginBottom: '8px' }}>
+                    why'd you stand up?
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                    {standUpReasons.map(r => (
+                      <button key={r} onClick={() => setSelectedReason(r)}
+                        style={{
+                          padding: '6px 10px', fontSize: '11px', cursor: 'pointer', borderRadius: '20px',
+                          fontWeight: selectedReason === r ? 700 : 400,
+                          background: selectedReason === r ? 'var(--primary)' : 'var(--surface-2)',
+                          color: selectedReason === r ? 'white' : 'var(--text-primary)',
+                          border: '2px solid var(--border)'
+                        }}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedReason === 'Other' && (
+                    <input type="text" placeholder="type your reason"
+                      value={customReason}
+                      onChange={e => setCustomReason(e.target.value)}
+                      style={{ marginBottom: '10px', width: '100%' }} />
+                  )}
+
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
                     <button onClick={() => setResumeMode('time')}
                       style={{
