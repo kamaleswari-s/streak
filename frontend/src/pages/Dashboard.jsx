@@ -58,6 +58,66 @@ const tourSlides = [
   },
 ]
 
+// ── SOUND ─────────────────────────────────────────────────
+let sharedAudioCtx = null
+
+function getAudioCtx() {
+  try {
+    if (!sharedAudioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext
+      if (!Ctx) return null
+      sharedAudioCtx = new Ctx()
+    }
+    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume()
+    return sharedAudioCtx
+  } catch (err) {
+    console.log('Audio unavailable:', err.message)
+    return null
+  }
+}
+
+const CHIME_NOTES = {
+  resume: [440, 554, 659],
+  start: [392, 523],
+  up: [523, 659],
+  milestone: [659, 784, 988],
+  alert: [330, 247],
+  end: [523, 392],
+}
+
+function playChime(kind) {
+  const ctx = getAudioCtx()
+  if (!ctx) return
+  const notes = CHIME_NOTES[kind] || CHIME_NOTES.up
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = freq
+    osc.type = 'sine'
+    const startTime = ctx.currentTime + i * 0.18
+    gain.gain.setValueAtTime(0, startTime)
+    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05)
+    gain.gain.linearRampToValueAtTime(0, startTime + 0.35)
+    osc.start(startTime)
+    osc.stop(startTime + 0.4)
+  })
+}
+
+function playResumeChime() {
+  playChime('resume')
+}
+
+function deviceStateKey(d) {
+  if (!d) return null
+  if (d.session?.startsWith('getting ready')) return 'settling'
+  if (d.session === 'standby') return 'standby'
+  if (d.phoneAlerted || d.session === 'phone detected') return 'phone'
+  return d.led || 'active'
+}
+
+// ── SMALL COMPONENTS ──────────────────────────────────────
 function MoonIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -418,14 +478,32 @@ function ColdStart({ onEnter }) {
   )
 }
 
-function LEDDevice({ score, sessionActive }) {
-  const getLEDColor = () => {
-    if (!sessionActive) return { color: '#ffffff', label: 'white', desc: 'standby — no active session' }
-    if (score < 30) return { color: '#EF9F27', label: 'yellow', desc: 'building — under 30 mins' }
-    if (score < 60) return { color: '#4A90D9', label: 'blue', desc: 'momentum growing — 30 to 60 mins' }
-    return { color: '#639922', label: 'green', desc: 'full flow state — 60+ mins' }
+const LED_PALETTE = {
+  white:  { color: '#ffffff', label: 'white',  desc: 'standby, no active session' },
+  yellow: { color: '#EF9F27', label: 'yellow', desc: 'session started, building momentum' },
+  blue:   { color: '#4A90D9', label: 'blue',   desc: 'momentum growing' },
+  green:  { color: '#639922', label: 'green',  desc: 'full flow state' },
+  red:    { color: '#e04545', label: 'red',    desc: 'phone detected, session paused' },
+}
+
+function LEDDevice({ score, sessionActive, deviceOnline, deviceData }) {
+  const mirrorDevice = deviceOnline && deviceData && !(sessionActive && deviceData.session === 'standby')
+  let led
+  let glowing
+
+  if (mirrorDevice) {
+    const settling = deviceData.session?.startsWith('getting ready')
+    led = settling
+      ? { ...LED_PALETTE.white, desc: 'settling in, session starts soon' }
+      : (LED_PALETTE[deviceData.led] || LED_PALETTE.white)
+    glowing = settling || deviceData.session !== 'standby'
+  } else {
+    glowing = sessionActive
+    if (!sessionActive) led = { color: '#ffffff', label: 'white', desc: 'standby, no active session' }
+    else if (score < 30) led = { color: '#EF9F27', label: 'yellow', desc: 'building, under 30 mins' }
+    else if (score < 60) led = { color: '#4A90D9', label: 'blue', desc: 'momentum growing, 30 to 60 mins' }
+    else led = { color: '#639922', label: 'green', desc: 'full flow state, 60+ mins' }
   }
-  const led = getLEDColor()
 
   return (
     <motion.div className="glass" style={{ padding: '2rem', textAlign: 'center' }}>
@@ -433,21 +511,24 @@ function LEDDevice({ score, sessionActive }) {
       <motion.svg width="120" height="120" viewBox="0 0 100 100"
         animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity }}
         style={{ display: 'block', margin: '0 auto 1rem' }}>
-        <motion.circle cx="50" cy="8" r="2.5" animate={{ opacity: sessionActive ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity }} />
-        <motion.circle cx="73" cy="15" r="2.5" animate={{ opacity: sessionActive ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.2 }} />
-        <motion.circle cx="27" cy="15" r="2.5" animate={{ opacity: sessionActive ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.4 }} />
-        <motion.circle cx="82" cy="38" r="2.5" animate={{ opacity: sessionActive ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.6 }} />
-        <motion.circle cx="18" cy="38" r="2.5" animate={{ opacity: sessionActive ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }} />
+        <motion.circle cx="50" cy="8" r="2.5" animate={{ opacity: glowing ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity }} />
+        <motion.circle cx="73" cy="15" r="2.5" animate={{ opacity: glowing ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.2 }} />
+        <motion.circle cx="27" cy="15" r="2.5" animate={{ opacity: glowing ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.4 }} />
+        <motion.circle cx="82" cy="38" r="2.5" animate={{ opacity: glowing ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.6 }} />
+        <motion.circle cx="18" cy="38" r="2.5" animate={{ opacity: glowing ? [0.3, 1, 0.3] : 0.2, fill: led.color }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }} />
         <rect x="20" y="62" width="60" height="7" rx="3.5" fill="var(--primary)" />
         <rect x="24" y="69" width="6" height="16" rx="3" fill="var(--primary)" />
         <rect x="70" y="69" width="6" height="16" rx="3" fill="var(--primary)" />
         <rect x="30" y="44" width="40" height="20" rx="5" fill="var(--primary-light)" />
         <rect x="34" y="48" width="32" height="12" rx="3" fill="white" opacity="0.5" />
-        <motion.circle cx="50" cy="38" r="7" animate={{ fill: led.color, r: sessionActive ? [6, 9, 6] : 6 }} transition={{ duration: 1.8, repeat: Infinity }} />
+        <motion.circle cx="50" cy="38" r="7" animate={{ fill: led.color, r: glowing ? [6, 9, 6] : 6 }} transition={{ duration: 1.8, repeat: Infinity }} />
         <circle cx="50" cy="38" r="3" fill="white" />
       </motion.svg>
       <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '18px', color: 'var(--primary)', marginBottom: '4px', fontWeight: '700' }}>{led.label}</div>
       <div style={{ fontSize: '13px', color: 'var(--text-primary)', opacity: 0.75 }}>{led.desc}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.45, marginTop: '8px' }}>
+        {mirrorDevice ? 'live from your device' : 'estimated from session time'}
+      </div>
     </motion.div>
   )
 }
@@ -602,29 +683,6 @@ function UpcomingSessionsCard({ navigate }) {
   )
 }
 
-function playResumeChime() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const notes = [440, 554, 659]
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = freq
-      osc.type = 'sine'
-      const startTime = ctx.currentTime + i * 0.18
-      gain.gain.setValueAtTime(0, startTime)
-      gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05)
-      gain.gain.linearRampToValueAtTime(0, startTime + 0.35)
-      osc.start(startTime)
-      osc.stop(startTime + 0.4)
-    })
-  } catch (err) {
-    console.log('Could not play chime:', err.message)
-  }
-}
-
 const standUpReasons = ['Bathroom', 'Food / Water', 'Phone call', 'Tired', 'Distracted', 'Other']
 
 export default function Dashboard() {
@@ -649,11 +707,22 @@ export default function Dashboard() {
   const [pausedUntil, setPausedUntil] = useState(null)
   const [pauseTotalMs, setPauseTotalMs] = useState(0)
   const [oledData, setOledData] = useState({ session: 'standby', ir: 0, pir: 0, gas: 0, temp: 0, hum: 0, led: 'white', speaker: '-', phoneAlerted: false, aqiAlerted: false })
+  const [deviceOnline, setDeviceOnline] = useState(false)
   const [showReadyPopup, setShowReadyPopup] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
   const nudgeShownRef = useRef(false)
+  const lastStatusAtRef = useRef(0)
+  const prevStateRef = useRef(null)
+  const lastMilestoneRef = useRef(0)
   const { requestWakeLock, releaseWakeLock } = useWakeLock()
+
+  const scheduleReadyPopup = () => {
+    setTimeout(() => {
+      setShowReadyPopup(true)
+      playChime('start')
+    }, 60000)
+  }
 
   const fetchDashboard = async () => {
     try {
@@ -695,13 +764,67 @@ export default function Dashboard() {
     })
     socketRef.current.on(`tap_${user?.user_id}`, () => {
       console.log('STRËAK tap received - settle-in started')
-      setTimeout(() => setShowReadyPopup(true), 60000)
+      scheduleReadyPopup()
     })
     socketRef.current.on(`status_${user?.user_id}`, (statusData) => {
+      lastStatusAtRef.current = Date.now()
+      setDeviceOnline(true)
       setOledData(statusData)
     })
     return () => socketRef.current?.disconnect()
   }, [])
+
+  // browsers only allow sound after a click or key press on the page
+  useEffect(() => {
+    const unlock = () => { getAudioCtx() }
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
+  // device counts as offline if no status message arrives for 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastStatusAtRef.current && Date.now() - lastStatusAtRef.current > 5000) {
+        setDeviceOnline(false)
+      }
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // chime whenever the device moves to a new state
+  useEffect(() => {
+    if (!deviceOnline) {
+      prevStateRef.current = null
+      return
+    }
+    const key = deviceStateKey(oledData)
+    const prev = prevStateRef.current
+    prevStateRef.current = key
+    if (prev === null || prev === key) return
+    if (prev === 'phone' && key !== 'standby') {
+      playChime('resume')
+      return
+    }
+    const map = { settling: 'start', yellow: 'start', blue: 'up', green: 'milestone', phone: 'alert', standby: 'end' }
+    playChime(map[key] || 'up')
+  }, [oledData, deviceOnline])
+
+  // milestone ding every 30 minutes of an active session
+  useEffect(() => {
+    if (!sessionActive) {
+      lastMilestoneRef.current = 0
+      return
+    }
+    const block = Math.floor(elapsed / 1800)
+    if (block > lastMilestoneRef.current) {
+      lastMilestoneRef.current = block
+      if (elapsed - block * 1800 < 5) playChime('milestone')
+    }
+  }, [elapsed, sessionActive])
 
   useEffect(() => {
     if (sessionActive && sessionStart) {
@@ -752,7 +875,7 @@ export default function Dashboard() {
   const dismissResumeAlarm = () => {
     setPausedUntil(null)
     setPauseTotalMs(0)
-    setTimeout(() => setShowReadyPopup(true), 60000)
+    scheduleReadyPopup()
   }
 
   const handleTourDone = () => {
@@ -795,15 +918,15 @@ export default function Dashboard() {
   }
 
   const endSession = async (reason) => {
-  if (!sessionActive) return
-  setSessionActive(false)
-  setSessionStart(null)
-  setElapsed(0)
-  try {
-    await axios.post(`${API}/session/end`, { reason }, { headers: { Authorization: `Bearer ${token}` } })
-    fetchDashboard()
-  } catch (err) { console.error(err) }
-}
+    if (!sessionActive) return
+    setSessionActive(false)
+    setSessionStart(null)
+    setElapsed(0)
+    try {
+      await axios.post(`${API}/session/end`, { reason }, { headers: { Authorization: `Bearer ${token}` } })
+      fetchDashboard()
+    } catch (err) { console.error(err) }
+  }
 
   const getFinalReason = () => {
     if (selectedReason === 'Other') return customReason.trim() || 'Other'
@@ -820,7 +943,7 @@ export default function Dashboard() {
     console.log('STRËAK stand-up reason:', reason)
     setShowStandUpOptions(false)
     resetReason()
-    endSession()
+    endSession(reason)
   }
 
   const handleStartResumeTimer = () => {
@@ -843,7 +966,7 @@ export default function Dashboard() {
     resetReason()
     setPauseTotalMs(targetMs - Date.now())
     setPausedUntil(targetMs)
-    endSession()
+    endSession(reason)
   }
 
   const handleReadyStart = () => {
@@ -1035,7 +1158,7 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          <LEDDevice score={elapsed / 60} sessionActive={sessionActive} />
+          <LEDDevice score={elapsed / 60} sessionActive={sessionActive} deviceOnline={deviceOnline} deviceData={oledData} />
           <AuraRing score={data?.aura_score || 0} />
         </div>
       </div>
