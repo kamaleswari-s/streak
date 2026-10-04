@@ -10,6 +10,11 @@ import useWakeLock from '../useWakeLock'
 
 const ANOMALY_COOLDOWN_MS = 120000
 
+// 20-20-20 eye rest: every 20 minutes of a session, look far away for 20 seconds
+const EYE_REST_EVERY_SEC = 20 * 60
+const EYE_REST_LOOK_SEC = 20
+const EYE_REST_ASK_TIMEOUT_MS = 60000
+
 const tourSlides = [
   { isLogo: true },
   {
@@ -86,6 +91,7 @@ const CHIME_NOTES = {
   alert: [330, 247],
   end: [523, 392],
   nudge: [494, 587],
+  eye: [587, 698],
 }
 
 function playChime(kind) {
@@ -206,6 +212,83 @@ function AiNudgeCard({ visible, onDismiss }) {
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+function EyeRestCard({ phase, secondsLeft, onStart, onSkip }) {
+  const radius = 34
+  const circumference = 2 * Math.PI * radius
+  const progress = phase === 'counting' ? 1 - secondsLeft / EYE_REST_LOOK_SEC : phase === 'done' ? 1 : 0
+  const ringText = phase === 'counting' ? String(secondsLeft) : phase === 'done' ? '✓' : String(EYE_REST_LOOK_SEC)
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '24px', left: 0, right: 0, zIndex: 999,
+      display: 'flex', justifyContent: 'center', pointerEvents: 'none'
+    }}>
+      <AnimatePresence>
+        {phase && (
+          <motion.div key="eyecard"
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            className="glass"
+            style={{
+              pointerEvents: 'auto', width: '360px', maxWidth: '92vw', padding: '1.25rem 1.5rem',
+              borderLeft: '4px solid var(--accent)',
+              display: 'flex', gap: '16px', alignItems: 'center'
+            }}>
+            <svg width="80" height="80" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
+              <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--border)" strokeWidth="6" />
+              <circle cx="40" cy="40" r={radius} fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference - progress * circumference}
+                style={{ transform: 'rotate(-90deg)', transformOrigin: '40px 40px', transition: 'stroke-dashoffset 0.3s linear' }} />
+              <text x="40" y="49" textAnchor="middle" fill="var(--text-primary)"
+                style={{ fontFamily: 'var(--font-pixel)', fontSize: '24px' }}>
+                {ringText}
+              </text>
+            </svg>
+
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.6, marginBottom: '6px', letterSpacing: '1px' }}>
+                20-20-20 EYE REST
+              </div>
+
+              {phase === 'ask' && (
+                <>
+                  <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.5, marginBottom: '10px' }}>
+                    look at something about 20 feet away for 20 seconds. your eyes have been working hard.
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn-primary" onClick={onStart}
+                      style={{ flex: 1, padding: '7px 4px', fontSize: '12px' }}>
+                      start 20s
+                    </button>
+                    <button className="btn-outline" onClick={onSkip}
+                      style={{ flex: 1, padding: '7px 4px', fontSize: '12px' }}>
+                      skip
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {phase === 'counting' && (
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  keep looking far away. let your eyes relax.
+                </div>
+              )}
+
+              {phase === 'done' && (
+                <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  nice. your eyes thank you. back to it.
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
 
@@ -788,6 +871,8 @@ export default function Dashboard() {
   const [deviceOnline, setDeviceOnline] = useState(false)
   const [showReadyPopup, setShowReadyPopup] = useState(false)
   const [showAiNudge, setShowAiNudge] = useState(false)
+  const [eyePhase, setEyePhase] = useState(null)
+  const [eyeLeft, setEyeLeft] = useState(EYE_REST_LOOK_SEC)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
   const nudgeShownRef = useRef(false)
@@ -795,6 +880,9 @@ export default function Dashboard() {
   const prevStateRef = useRef(null)
   const lastMilestoneRef = useRef(0)
   const lastAnomalyAtRef = useRef(0)
+  const lastEyeBlockRef = useRef(0)
+  const eyePreviewRef = useRef(false)
+  const selfEndedAtRef = useRef(0)
   const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'strëak')
   const { requestWakeLock, releaseWakeLock } = useWakeLock()
 
@@ -803,6 +891,36 @@ export default function Dashboard() {
       setShowReadyPopup(true)
       playChime('start')
     }, 60000)
+  }
+
+  // ── eye rest ──
+  const logEvent = async (kind) => {
+    try {
+      await axios.post(`${API}/events`, { kind }, { headers: { Authorization: `Bearer ${token}` } })
+    } catch (err) { console.error(err) }
+  }
+
+  const openEyeRest = (preview = false) => {
+    eyePreviewRef.current = preview
+    setEyeLeft(EYE_REST_LOOK_SEC)
+    setEyePhase('ask')
+    playChime('eye')
+  }
+
+  const startEyeRest = () => {
+    setEyeLeft(EYE_REST_LOOK_SEC)
+    setEyePhase('counting')
+  }
+
+  const skipEyeRest = () => {
+    setEyePhase(null)
+    if (!eyePreviewRef.current) logEvent('eye_rest_skipped')
+  }
+
+  const finishEyeRest = () => {
+    setEyePhase('done')
+    playChime('up')
+    if (!eyePreviewRef.current) logEvent('eye_rest_done')
   }
 
   const fetchDashboard = async () => {
@@ -837,10 +955,12 @@ export default function Dashboard() {
       setElapsed(0)
     })
     socketRef.current.on(`session_ended_${user?.user_id}`, () => {
+      // if the dashboard itself just ended the session, do not open the stand-up panel again
+      const endedByDashboard = Date.now() - selfEndedAtRef.current < 8000
       setSessionActive(false)
       setSessionStart(null)
       setElapsed(0)
-      setShowStandUpOptions(true)
+      if (!endedByDashboard) setShowStandUpOptions(true)
       fetchDashboard()
     })
     socketRef.current.on(`tap_${user?.user_id}`, () => {
@@ -915,6 +1035,48 @@ export default function Dashboard() {
       if (elapsed - block * 1800 < 5) playChime('milestone')
     }
   }, [elapsed, sessionActive])
+
+  // 20-20-20 eye rest every 20 minutes of an active session
+  useEffect(() => {
+    if (!sessionActive) {
+      lastEyeBlockRef.current = 0
+      return
+    }
+    const block = Math.floor(elapsed / EYE_REST_EVERY_SEC)
+    if (block > lastEyeBlockRef.current) {
+      lastEyeBlockRef.current = block
+      if (elapsed - block * EYE_REST_EVERY_SEC < 5) openEyeRest(false)
+    }
+  }, [elapsed, sessionActive])
+
+  // close the eye rest card when the session ends
+  useEffect(() => {
+    if (!sessionActive) setEyePhase(null)
+  }, [sessionActive])
+
+  // eye rest phases: ask (auto-skips after a minute), counting down, done
+  useEffect(() => {
+    if (eyePhase === 'ask') {
+      const t = setTimeout(() => skipEyeRest(), EYE_REST_ASK_TIMEOUT_MS)
+      return () => clearTimeout(t)
+    }
+    if (eyePhase === 'counting') {
+      const endAt = Date.now() + EYE_REST_LOOK_SEC * 1000
+      const t = setInterval(() => {
+        const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+        setEyeLeft(left)
+        if (left <= 0) {
+          clearInterval(t)
+          finishEyeRest()
+        }
+      }, 250)
+      return () => clearInterval(t)
+    }
+    if (eyePhase === 'done') {
+      const t = setTimeout(() => setEyePhase(null), 3500)
+      return () => clearTimeout(t)
+    }
+  }, [eyePhase])
 
   // live browser tab title
   useEffect(() => {
@@ -1025,6 +1187,7 @@ export default function Dashboard() {
 
   const endSession = async (reason) => {
     if (!sessionActive) return
+    selfEndedAtRef.current = Date.now()
     setSessionActive(false)
     setSessionStart(null)
     setElapsed(0)
@@ -1122,6 +1285,7 @@ export default function Dashboard() {
       <LateNightNudge show={showLateNightNudge} onDismiss={dismissLateNightNudge} />
       <ResumeAlarmOverlay pausedUntil={pausedUntil} pauseTotalMs={pauseTotalMs} onDismiss={dismissResumeAlarm} />
       <AiNudgeCard visible={showAiNudge} onDismiss={() => setShowAiNudge(false)} />
+      <EyeRestCard phase={eyePhase} secondsLeft={eyeLeft} onStart={startEyeRest} onSkip={skipEyeRest} />
       <OledStatusPopup data={oledData} />
       <ReadyToStartPopup visible={showReadyPopup} onStart={handleReadyStart} />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -1285,6 +1449,18 @@ export default function Dashboard() {
                     style={{ flex: 1, padding: '12px', fontSize: '15px', opacity: !sessionActive ? 0.4 : 1 }}>
                     stand up
                   </motion.button>
+                </div>
+              )}
+
+              {sessionActive && !eyePhase && !showStandUpOptions && (
+                <div style={{ marginTop: '0.9rem' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-primary)', opacity: 0.5 }}>
+                    eye rest reminder every 20 minutes of focus
+                  </div>
+                  <div onClick={() => openEyeRest(true)}
+                    style={{ fontSize: '11px', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, marginTop: '4px', opacity: 0.8 }}>
+                    preview the 20-20-20 eye rest →
+                  </div>
                 </div>
               )}
 

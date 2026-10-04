@@ -8,6 +8,9 @@ import API from '../config'
 export default function History() {
   const { token, logout } = useAuth()
   const [sessions, setSessions] = useState([])
+  const [eyeRests, setEyeRests] = useState({})
+  const [minReal, setMinReal] = useState(2)
+  const [breakMax, setBreakMax] = useState(180)
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
 
@@ -20,6 +23,9 @@ export default function History() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setSessions(res.data.sessions)
+      setEyeRests(res.data.eye_rests || {})
+      setMinReal(res.data.min_real_minutes != null ? res.data.min_real_minutes : 2)
+      setBreakMax(res.data.break_max_minutes != null ? res.data.break_max_minutes : 180)
     } catch (err) {
       if (err.response?.status === 401) logout()
     }
@@ -37,7 +43,7 @@ export default function History() {
   const formatTime = (ts) => {
   if (!ts) return '--'
   try {
-    // format is now "2026-07-24T18:28:00" — pure IST no timezone label
+    // format is "2026-07-24T18:28:00" — pure IST no timezone label
     const timePart = ts.includes('T') ? ts.split('T')[1] : ts.split(' ')[1]
     if (!timePart) return '--'
     const [hourStr, minStr] = timePart.split(':')
@@ -58,9 +64,65 @@ export default function History() {
     return date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
-  // count how often each stand-up reason was used in the sessions on screen
-  const reasonCounts = {}
+  const toMs = (ts) => {
+    if (!ts) return null
+    const t = new Date(ts).getTime()
+    return isNaN(t) ? null : t
+  }
+
+  const isReal = (s) => (s.duration_minutes || 0) >= minReal
+
+  // ── group sessions by day and work out breaks ──
+  const dayGroups = []
   sessions.forEach(s => {
+    const last = dayGroups[dayGroups.length - 1]
+    if (last && last.date === s.date) last.items.push(s)
+    else dayGroups.push({ date: s.date, items: [s] })
+  })
+
+  const breakBefore = {}   // id of the later session -> the break that came right before it
+  const reasonBreakStats = {}   // reason -> total minutes and count of real breaks
+
+  dayGroups.forEach(g => {
+    const real = g.items.filter(isReal).slice().reverse()   // oldest first
+    g.sessionCount = real.length
+    g.study = real.reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
+    g.longest = real.reduce((m, s) => Math.max(m, s.duration_minutes || 0), 0)
+    g.breaks = []
+    for (let i = 1; i < real.length; i++) {
+      const prev = real[i - 1]
+      const cur = real[i]
+      const a = toMs(prev.end_time)
+      const b = toMs(cur.start_time)
+      if (a === null || b === null) continue
+      const gap = (b - a) / 60000
+      if (gap > 0 && gap < breakMax) {
+        const reason = prev.stand_up_reason || 'Not specified'
+        const info = { minutes: gap, reason }
+        g.breaks.push(info)
+        breakBefore[cur.id] = info
+        if (!reasonBreakStats[reason]) reasonBreakStats[reason] = { total: 0, n: 0 }
+        reasonBreakStats[reason].total += gap
+        reasonBreakStats[reason].n += 1
+      }
+    }
+    g.breakMin = g.breaks.reduce((sum, b) => sum + b.minutes, 0)
+    const e = eyeRests[g.date] || { done: 0, skipped: 0 }
+    g.eyeDone = e.done
+    g.eyeSkipped = e.skipped
+  })
+
+  const totalSessions = dayGroups.reduce((sum, g) => sum + g.sessionCount, 0)
+  const totalStudy = dayGroups.reduce((sum, g) => sum + g.study, 0)
+  const totalBreaks = dayGroups.reduce((sum, g) => sum + g.breaks.length, 0)
+  const totalBreakMin = dayGroups.reduce((sum, g) => sum + g.breakMin, 0)
+  const avgBreak = totalBreaks > 0 ? totalBreakMin / totalBreaks : 0
+  const totalEyeDone = dayGroups.reduce((sum, g) => sum + g.eyeDone, 0)
+  const totalEyeAll = dayGroups.reduce((sum, g) => sum + g.eyeDone + g.eyeSkipped, 0)
+
+  // ── why you stood up (counts of the reason on each real session) ──
+  const reasonCounts = {}
+  sessions.filter(isReal).forEach(s => {
     const r = (s.stand_up_reason || '').trim()
     if (!r) return
     reasonCounts[r] = (reasonCounts[r] || 0) + 1
@@ -77,6 +139,15 @@ export default function History() {
       <circle cx="24" cy="14" r="5" fill="var(--primary)" opacity="0.2"/>
     </svg>
   )
+
+  const tileStyle = { padding: '1.1rem', textAlign: 'center' }
+  const tileNumber = { fontFamily: 'var(--font-pixel)', fontSize: '26px', color: 'var(--primary)', lineHeight: 1, fontWeight: '700' }
+  const tileLabel = { fontSize: '11px', color: 'var(--text-primary)', opacity: 0.65, fontWeight: '700', letterSpacing: '1px', marginTop: '6px' }
+  const chipStyle = {
+    display: 'inline-block', padding: '3px 10px', borderRadius: '20px',
+    border: '1.5px solid var(--border)', background: 'var(--surface-2)',
+    fontSize: '11px', fontWeight: '600', color: 'var(--text-primary)', opacity: 0.9
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -111,6 +182,31 @@ export default function History() {
             ))}
           </div>
 
+          {!loading && sessions.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '1.5rem' }}>
+              <div className="glass" style={tileStyle}>
+                <div style={tileNumber}>{totalSessions}</div>
+                <div style={tileLabel}>SESSIONS</div>
+              </div>
+              <div className="glass" style={tileStyle}>
+                <div style={tileNumber}>{formatDuration(totalStudy)}</div>
+                <div style={tileLabel}>STUDIED</div>
+              </div>
+              <div className="glass" style={tileStyle}>
+                <div style={tileNumber}>{totalBreaks}</div>
+                <div style={tileLabel}>BREAKS</div>
+              </div>
+              <div className="glass" style={tileStyle}>
+                <div style={tileNumber}>{totalBreaks > 0 ? formatDuration(avgBreak) : '--'}</div>
+                <div style={tileLabel}>AVG BREAK</div>
+              </div>
+              <div className="glass" style={tileStyle}>
+                <div style={tileNumber}>{totalEyeAll > 0 ? `${totalEyeDone}/${totalEyeAll}` : '--'}</div>
+                <div style={tileLabel}>EYE RESTS</div>
+              </div>
+            </div>
+          )}
+
           {!loading && reasonList.length > 0 && (
             <motion.div className="glass"
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -122,29 +218,35 @@ export default function History() {
                 WHY YOU STOOD UP
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {reasonList.map(([reason, count]) => (
-                  <div key={reason} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '190px', fontSize: '13px', fontWeight: '600',
-                      color: 'var(--text-primary)', opacity: 0.85, flexShrink: 0
-                    }}>
-                      {reason}
+                {reasonList.map(([reason, count]) => {
+                  const rb = reasonBreakStats[reason]
+                  return (
+                    <div key={reason} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '190px', fontSize: '13px', fontWeight: '600',
+                        color: 'var(--text-primary)', opacity: 0.85, flexShrink: 0
+                      }}>
+                        {reason}
+                      </div>
+                      <div style={{ flex: 1, height: '8px', borderRadius: '4px', background: 'var(--border)', overflow: 'hidden' }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.round((count / maxReasonCount) * 100)}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          style={{ height: '100%', background: 'var(--primary)', borderRadius: '4px' }} />
+                      </div>
+                      <div style={{
+                        width: '24px', textAlign: 'right', fontFamily: 'var(--font-pixel)',
+                        fontSize: '16px', color: 'var(--primary)', fontWeight: '700'
+                      }}>
+                        {count}
+                      </div>
+                      <div style={{ width: '96px', fontSize: '11px', color: 'var(--text-primary)', opacity: 0.6 }}>
+                        {rb ? `avg break ${formatDuration(rb.total / rb.n)}` : ''}
+                      </div>
                     </div>
-                    <div style={{ flex: 1, height: '8px', borderRadius: '4px', background: 'var(--border)', overflow: 'hidden' }}>
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.round((count / maxReasonCount) * 100)}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
-                        style={{ height: '100%', background: 'var(--primary)', borderRadius: '4px' }} />
-                    </div>
-                    <div style={{
-                      width: '24px', textAlign: 'right', fontFamily: 'var(--font-pixel)',
-                      fontSize: '16px', color: 'var(--primary)', fontWeight: '700'
-                    }}>
-                      {count}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </motion.div>
           )}
@@ -172,91 +274,122 @@ export default function History() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {sessions.map((s, i) => (
-                <motion.div key={s.id} className="glass"
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ y: -3 }}
-                  style={{
-                    padding: '1.25rem 1.5rem',
-                    display: 'flex', alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap', gap: '12px'
-                  }}>
-                  <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              {dayGroups.map(g => (
+                <div key={g.date}>
+                  <div style={{ marginBottom: '12px', padding: '0 4px' }}>
                     <div style={{
-                      fontFamily: 'var(--font-pixel)', fontSize: '18px',
-                      color: 'var(--primary)', marginBottom: '4px', fontWeight: '700'
+                      fontFamily: 'var(--font-pixel)', fontSize: '20px',
+                      color: 'var(--primary)', marginBottom: '8px', fontWeight: '700'
                     }}>
-                      {formatDate(s.date)}
+                      {formatDate(g.date)}
                     </div>
-                    <div style={{
-                      fontSize: '15px', color: 'var(--text-primary)',
-                      opacity: 0.85, fontWeight: '600'
-                    }}>
-                      {formatTime(s.start_time)} — {formatTime(s.end_time)}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {g.sessionCount === 0 ? (
+                        <span style={chipStyle}>only short test sessions</span>
+                      ) : (
+                        <>
+                          <span style={chipStyle}>{g.sessionCount} {g.sessionCount === 1 ? 'session' : 'sessions'}</span>
+                          <span style={chipStyle}>{formatDuration(g.study)} studied</span>
+                          <span style={chipStyle}>longest {formatDuration(g.longest)}</span>
+                          <span style={chipStyle}>
+                            {g.breaks.length} {g.breaks.length === 1 ? 'break' : 'breaks'}
+                            {g.breaks.length > 0 ? ` · ${formatDuration(g.breakMin)}` : ''}
+                          </span>
+                          {(g.eyeDone + g.eyeSkipped) > 0 && (
+                            <span style={chipStyle}>eye rests {g.eyeDone}/{g.eyeDone + g.eyeSkipped}</span>
+                          )}
+                        </>
+                      )}
                     </div>
-                    {s.stand_up_reason && (
-                      <div style={{
-                        display: 'inline-block', marginTop: '8px',
-                        padding: '3px 10px', borderRadius: '20px',
-                        border: '1.5px solid var(--border)', background: 'var(--surface-2)',
-                        fontSize: '11px', fontWeight: '600', color: 'var(--text-primary)', opacity: 0.85
-                      }}>
-                        {s.stand_up_reason}
-                      </div>
-                    )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{
-                        fontFamily: 'var(--font-pixel)', fontSize: '22px',
-                        color: 'var(--primary)', fontWeight: '700', lineHeight: 1
-                      }}>
-                        {formatDuration(s.duration_minutes)}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {g.items.map((s, i) => (
+                      <div key={s.id}>
+                        <motion.div className="glass"
+                          initial={{ opacity: 0, y: 20 }} animate={{ opacity: isReal(s) ? 1 : 0.5, y: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          whileHover={{ y: -3 }}
+                          style={{
+                            padding: '1.25rem 1.5rem',
+                            display: 'flex', alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap', gap: '12px'
+                          }}>
+                          <div>
+                            <div style={{
+                              fontSize: '15px', color: 'var(--text-primary)',
+                              opacity: 0.85, fontWeight: '600'
+                            }}>
+                              {formatTime(s.start_time)} — {formatTime(s.end_time)}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                              {s.stand_up_reason && <span style={chipStyle}>{s.stand_up_reason}</span>}
+                              {!isReal(s) && <span style={chipStyle}>too short to count</span>}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                fontFamily: 'var(--font-pixel)', fontSize: '22px',
+                                color: 'var(--primary)', fontWeight: '700', lineHeight: 1
+                              }}>
+                                {formatDuration(s.duration_minutes)}
+                              </div>
+                              <div style={{
+                                fontSize: '11px', color: 'var(--text-primary)',
+                                opacity: 0.65, fontWeight: '700',
+                                letterSpacing: '1px', marginTop: '4px'
+                              }}>
+                                DURATION
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                fontFamily: 'var(--font-pixel)', fontSize: '22px',
+                                color: 'var(--primary)', fontWeight: '700', lineHeight: 1
+                              }}>
+                                {Math.round(s.momentum_score)}
+                              </div>
+                              <div style={{
+                                fontSize: '11px', color: 'var(--text-primary)',
+                                opacity: 0.65, fontWeight: '700',
+                                letterSpacing: '1px', marginTop: '4px'
+                              }}>
+                                MOMENTUM
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                fontFamily: 'var(--font-pixel)', fontSize: '22px',
+                                color: 'var(--accent-dark)', fontWeight: '700', lineHeight: 1
+                              }}>
+                                {Math.round(s.aura_score)}
+                              </div>
+                              <div style={{
+                                fontSize: '11px', color: 'var(--text-primary)',
+                                opacity: 0.65, fontWeight: '700',
+                                letterSpacing: '1px', marginTop: '4px'
+                              }}>
+                                AURA
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+
+                        {breakBefore[s.id] && (
+                          <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 0' }}>
+                            <span style={{ ...chipStyle, background: 'transparent', borderStyle: 'dashed' }}>
+                              break · {formatDuration(breakBefore[s.id].minutes)} · {breakBefore[s.id].reason}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div style={{
-                        fontSize: '11px', color: 'var(--text-primary)',
-                        opacity: 0.65, fontWeight: '700',
-                        letterSpacing: '1px', marginTop: '4px'
-                      }}>
-                        DURATION
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{
-                        fontFamily: 'var(--font-pixel)', fontSize: '22px',
-                        color: 'var(--primary)', fontWeight: '700', lineHeight: 1
-                      }}>
-                        {Math.round(s.momentum_score)}
-                      </div>
-                      <div style={{
-                        fontSize: '11px', color: 'var(--text-primary)',
-                        opacity: 0.65, fontWeight: '700',
-                        letterSpacing: '1px', marginTop: '4px'
-                      }}>
-                        MOMENTUM
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{
-                        fontFamily: 'var(--font-pixel)', fontSize: '22px',
-                        color: 'var(--accent-dark)', fontWeight: '700', lineHeight: 1
-                      }}>
-                        {Math.round(s.aura_score)}
-                      </div>
-                      <div style={{
-                        fontSize: '11px', color: 'var(--text-primary)',
-                        opacity: 0.65, fontWeight: '700',
-                        letterSpacing: '1px', marginTop: '4px'
-                      }}>
-                        AURA
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}

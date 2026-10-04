@@ -29,6 +29,12 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 # History but are ignored in streaks, analytics, scores and the leaderboard.
 MIN_REAL_SESSION_MIN = 2.0
 
+# A gap between two sessions on the same day counts as a break if it is shorter
+# than this. Longer gaps mean you were away, not on a break.
+BREAK_MAX_MIN = 180.0
+
+EYE_REST_KINDS = ("eye_rest_done", "eye_rest_skipped")
+
 # ── MQTT CONFIG ───────────────────────────────────────────
 MQTT_HOST = "hb67af32.ala.asia-southeast1.emqxsl.com"
 MQTT_PORT = 8883
@@ -70,6 +76,15 @@ def init_db():
         )
     """)
     cur.execute("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS stand_up_reason TEXT")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS wellbeing_events (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            session_id INTEGER,
+            kind TEXT NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+    """)
     conn.commit()
     cur.close()
     conn.close()
@@ -201,6 +216,74 @@ def get_sleep_pattern(user_id):
         "avg_rest_gap_hours": avg_gap,
         "longest_late_streak": longest_streak
     }
+
+# ── DAILY SUMMARIES AND BREAKS ────────────────────────────
+# Break length = real gap between the end of one session and the start of the
+# next on the same day. The break kind is the reason saved on the earlier session.
+def get_day_and_break_stats(user_id):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT date, start_time, end_time, duration_minutes, stand_up_reason
+        FROM sessions
+        WHERE user_id=%s AND duration_minutes >= %s AND end_time IS NOT NULL
+        ORDER BY start_time ASC
+    """, (user_id, MIN_REAL_SESSION_MIN))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    days = {}
+    breaks = []
+    prev = None
+    for r in rows:
+        d = r["date"]
+        day = days.setdefault(d, {
+            "sessions": 0, "study_min": 0.0, "longest_session": 0.0,
+            "breaks": 0, "break_min": 0.0, "first_start": None, "last_end": None
+        })
+        day["sessions"] += 1
+        day["study_min"] += r["duration_minutes"]
+        day["longest_session"] = max(day["longest_session"], r["duration_minutes"])
+        start_ist = r["start_time"].astimezone(IST)
+        end_ist = r["end_time"].astimezone(IST)
+        if day["first_start"] is None:
+            day["first_start"] = start_ist.strftime("%H:%M")
+        day["last_end"] = end_ist.strftime("%H:%M")
+
+        if prev is not None and prev["date"] == d:
+            gap = (r["start_time"] - prev["end_time"]).total_seconds() / 60
+            if 0 < gap < BREAK_MAX_MIN:
+                reason = (prev["stand_up_reason"] or "Not specified").strip() or "Not specified"
+                breaks.append({"date": d, "minutes": gap, "reason": reason})
+                day["breaks"] += 1
+                day["break_min"] += gap
+        prev = r
+
+    return days, breaks
+
+def get_eye_rest_counts(user_id, since_date=None):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT kind, created_at FROM wellbeing_events
+        WHERE user_id=%s AND kind = ANY(%s)
+    """, (user_id, list(EYE_REST_KINDS)))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    per_day = {}
+    for r in rows:
+        d = r["created_at"].astimezone(IST).date().isoformat()
+        if since_date and d < since_date:
+            continue
+        bucket = per_day.setdefault(d, {"done": 0, "skipped": 0})
+        if r["kind"] == "eye_rest_done":
+            bucket["done"] += 1
+        else:
+            bucket["skipped"] += 1
+    return per_day
 
 # ── SESSION STATE ─────────────────────────────────────────
 active_sessions = {}
@@ -408,6 +491,28 @@ def save_session_reason():
     conn.close()
     return jsonify({"status": "saved"})
 
+# logs a wellbeing event, for now the 20-20-20 eye rest (done or skipped)
+@app.route("/events", methods=["POST"])
+@token_required
+def log_event():
+    data = request.json or {}
+    kind = data.get("kind")
+    if kind not in EYE_REST_KINDS:
+        return jsonify({"error": "Unknown event kind"}), 400
+
+    session_id = active_sessions.get(request.user_id, {}).get("session_id")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO wellbeing_events (user_id, session_id, kind) VALUES (%s, %s, %s)",
+        (request.user_id, session_id, kind)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status": "logged"})
+
 # ── DASHBOARD ─────────────────────────────────────────────
 @app.route("/dashboard", methods=["GET"])
 @token_required
@@ -526,12 +631,73 @@ def analytics():
 
     sleep_pattern = get_sleep_pattern(user_id)
 
+    # new: per-day summaries, breaks and eye rests
+    days, breaks = get_day_and_break_stats(user_id)
+    eye = get_eye_rest_counts(user_id)
+
+    daily = []
+    for d in sorted(days.keys(), reverse=True)[:30]:
+        day = days[d]
+        e = eye.get(d, {"done": 0, "skipped": 0})
+        daily.append({
+            "date": d,
+            "sessions": day["sessions"],
+            "study_min": round(day["study_min"], 1),
+            "longest_session": round(day["longest_session"], 1),
+            "breaks": day["breaks"],
+            "break_min": round(day["break_min"], 1),
+            "first_start": day["first_start"],
+            "last_end": day["last_end"],
+            "eye_rests_done": e["done"],
+            "eye_rests_skipped": e["skipped"],
+        })
+
+    by_reason = {}
+    for b in breaks:
+        r = by_reason.setdefault(b["reason"], {"count": 0, "total": 0.0})
+        r["count"] += 1
+        r["total"] += b["minutes"]
+    breaks_by_reason = sorted(
+        [{"reason": k, "count": v["count"], "avg_min": round(v["total"] / v["count"], 1)} for k, v in by_reason.items()],
+        key=lambda x: -x["count"]
+    )
+
+    total_break = sum(b["minutes"] for b in breaks)
+    total_study = sum(d["study_min"] for d in days.values())
+
+    break_summary = {
+        "count": len(breaks),
+        "total_min": round(total_break, 1),
+        "avg_min": round(total_break / len(breaks), 1) if breaks else None,
+        "longest_min": round(max(b["minutes"] for b in breaks), 1) if breaks else None,
+        "by_reason": breaks_by_reason,
+    }
+
+    focus_summary = {
+        "study_min": round(total_study, 1),
+        "days_with_sessions": len(days),
+        "avg_sessions_per_day": round(sum(d["sessions"] for d in days.values()) / len(days), 1) if days else None,
+        "focus_percent": round(100 * total_study / (total_study + total_break)) if (total_study + total_break) > 0 else None,
+    }
+
+    eye_done = sum(v["done"] for v in eye.values())
+    eye_skipped = sum(v["skipped"] for v in eye.values())
+    eye_summary = {
+        "done": eye_done,
+        "skipped": eye_skipped,
+        "done_percent": round(100 * eye_done / (eye_done + eye_skipped)) if (eye_done + eye_skipped) > 0 else None,
+    }
+
     return jsonify({
         "by_hour": by_hour,
         "by_day": [dict(r) for r in by_day],
         "monthly_trend": [dict(r) for r in monthly],
         "stats": dict(stats),
-        "sleep_pattern": sleep_pattern
+        "sleep_pattern": sleep_pattern,
+        "daily": daily,
+        "breaks": break_summary,
+        "focus": focus_summary,
+        "eye_rest": eye_summary,
     })
 
 # ── HISTORY (raw log, shows every session including short ones) ──
@@ -554,8 +720,8 @@ def history():
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
         SELECT id, date,
-        to_char(start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as start_time,
-        to_char(end_time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as end_time,
+        to_char(start_time AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as start_time,
+        to_char(end_time AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS') as end_time,
         duration_minutes, momentum_score, aura_score, stand_up_reason
         FROM sessions WHERE user_id=%s AND duration_minutes > 0
         AND date >= %s ORDER BY start_time DESC
@@ -564,7 +730,12 @@ def history():
     cur.close()
     conn.close()
 
-    return jsonify({"sessions": [dict(s) for s in sessions]})
+    return jsonify({
+        "sessions": [dict(s) for s in sessions],
+        "eye_rests": get_eye_rest_counts(user_id, since),
+        "min_real_minutes": MIN_REAL_SESSION_MIN,
+        "break_max_minutes": BREAK_MAX_MIN,
+    })
 
 # ── LEADERBOARD ───────────────────────────────────────────
 @app.route("/leaderboard", methods=["GET"])
