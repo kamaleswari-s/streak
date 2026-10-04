@@ -25,6 +25,10 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 DATABASE_URL = os.getenv("DATABASE_URL")
 JWT_SECRET = os.getenv("JWT_SECRET")
 
+# Sessions shorter than this many minutes (quick tests, accidental taps) stay in
+# History but are ignored in streaks, analytics, scores and the leaderboard.
+MIN_REAL_SESSION_MIN = 2.0
+
 # ── MQTT CONFIG ───────────────────────────────────────────
 MQTT_HOST = "hb67af32.ala.asia-southeast1.emqxsl.com"
 MQTT_PORT = 8883
@@ -110,9 +114,9 @@ def get_streak(user_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
         SELECT DISTINCT date FROM sessions
-        WHERE user_id = %s AND duration_minutes > 0
+        WHERE user_id = %s AND duration_minutes >= %s
         ORDER BY date DESC
-    """, (user_id,))
+    """, (user_id, MIN_REAL_SESSION_MIN))
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -144,10 +148,10 @@ def get_sleep_pattern(user_id):
     cur.execute("""
         SELECT date, MIN(start_time) as first_start, MAX(end_time) as last_end
         FROM sessions
-        WHERE user_id = %s AND duration_minutes > 0
+        WHERE user_id = %s AND duration_minutes >= %s
         AND date >= %s
         GROUP BY date ORDER BY date ASC
-    """, (user_id, (datetime.now(IST).date() - timedelta(days=14)).isoformat()))
+    """, (user_id, MIN_REAL_SESSION_MIN, (datetime.now(IST).date() - timedelta(days=14)).isoformat()))
     days = cur.fetchall()
     cur.close()
     conn.close()
@@ -237,16 +241,16 @@ def do_end_session(user_id, reason=None):
 
     cur.execute("""
         SELECT COUNT(DISTINCT date) as count FROM sessions
-        WHERE user_id = %s AND date >= %s AND duration_minutes > 0
-    """, (user_id, (datetime.now(IST).date() - timedelta(days=7)).isoformat()))
+        WHERE user_id = %s AND date >= %s AND duration_minutes >= %s
+    """, (user_id, (datetime.now(IST).date() - timedelta(days=7)).isoformat(), MIN_REAL_SESSION_MIN))
     sessions_this_week = cur.fetchone()["count"]
 
     score = calculate_momentum(duration, sessions_this_week, streak)
 
     cur.execute("""
         SELECT AVG(duration_minutes) as avg_dur FROM sessions
-        WHERE user_id = %s AND duration_minutes > 0
-    """, (user_id,))
+        WHERE user_id = %s AND duration_minutes >= %s
+    """, (user_id, MIN_REAL_SESSION_MIN))
     avg_dur = cur.fetchone()["avg_dur"] or 0
 
     cur.execute("""
@@ -421,27 +425,29 @@ def dashboard():
         SELECT date, SUM(duration_minutes) as total_mins,
         MAX(momentum_score) as score
         FROM sessions WHERE user_id=%s
+        AND duration_minutes >= %s
         AND date >= %s
         GROUP BY date ORDER BY date ASC
-    """, (user_id, (today_ist - timedelta(days=7)).isoformat()))
+    """, (user_id, MIN_REAL_SESSION_MIN, (today_ist - timedelta(days=7)).isoformat()))
     weekly_data = cur.fetchall()
 
     cur.execute("""
         SELECT DISTINCT date FROM sessions
-        WHERE user_id=%s AND duration_minutes > 0
-    """, (user_id,))
+        WHERE user_id=%s AND duration_minutes >= %s
+    """, (user_id, MIN_REAL_SESSION_MIN))
     all_dates = [r["date"] for r in cur.fetchall()]
 
     cur.execute("""
         SELECT SUM(duration_minutes) as total
-        FROM sessions WHERE user_id=%s AND date=%s
-    """, (user_id, today_ist.isoformat()))
+        FROM sessions WHERE user_id=%s AND date=%s AND duration_minutes >= %s
+    """, (user_id, today_ist.isoformat(), MIN_REAL_SESSION_MIN))
     today_row = cur.fetchone()
     today_minutes = round(today_row["total"] or 0, 1)
 
     cur.execute("""
-        SELECT MAX(aura_score) as aura FROM sessions WHERE user_id=%s
-    """, (user_id,))
+        SELECT MAX(aura_score) as aura FROM sessions
+        WHERE user_id=%s AND duration_minutes >= %s
+    """, (user_id, MIN_REAL_SESSION_MIN))
     aura_row = cur.fetchone()
     aura_score = aura_row["aura"] or 0
 
@@ -471,8 +477,8 @@ def analytics():
 
     cur.execute("""
         SELECT start_time, duration_minutes
-        FROM sessions WHERE user_id=%s AND duration_minutes > 0
-    """, (user_id,))
+        FROM sessions WHERE user_id=%s AND duration_minutes >= %s
+    """, (user_id, MIN_REAL_SESSION_MIN))
     raw_sessions = cur.fetchall()
 
     hour_stats = {}
@@ -491,19 +497,19 @@ def analytics():
     cur.execute("""
         SELECT TO_CHAR(start_time AT TIME ZONE 'Asia/Kolkata', 'Day') as day,
         COUNT(*) as count, AVG(duration_minutes) as avg_dur
-        FROM sessions WHERE user_id=%s AND duration_minutes > 0
+        FROM sessions WHERE user_id=%s AND duration_minutes >= %s
         GROUP BY day ORDER BY count DESC
-    """, (user_id,))
+    """, (user_id, MIN_REAL_SESSION_MIN))
     by_day = cur.fetchall()
 
     today_ist = datetime.now(IST).date()
     cur.execute("""
         SELECT date, SUM(duration_minutes) as total,
         MAX(momentum_score) as score
-        FROM sessions WHERE user_id=%s AND duration_minutes > 0
+        FROM sessions WHERE user_id=%s AND duration_minutes >= %s
         AND date >= %s
         GROUP BY date ORDER BY date ASC
-    """, (user_id, (today_ist - timedelta(days=30)).isoformat()))
+    """, (user_id, MIN_REAL_SESSION_MIN, (today_ist - timedelta(days=30)).isoformat()))
     monthly = cur.fetchall()
 
     cur.execute("""
@@ -511,8 +517,8 @@ def analytics():
         MAX(duration_minutes) as best,
         COUNT(*) as total_sessions,
         SUM(duration_minutes) as total_mins
-        FROM sessions WHERE user_id=%s AND duration_minutes > 0
-    """, (user_id,))
+        FROM sessions WHERE user_id=%s AND duration_minutes >= %s
+    """, (user_id, MIN_REAL_SESSION_MIN))
     stats = cur.fetchone()
 
     cur.close()
@@ -528,7 +534,7 @@ def analytics():
         "sleep_pattern": sleep_pattern
     })
 
-# ── HISTORY ───────────────────────────────────────────────
+# ── HISTORY (raw log, shows every session including short ones) ──
 @app.route("/history", methods=["GET"])
 @token_required
 def history():
@@ -577,11 +583,11 @@ def leaderboard():
         SUM(s.duration_minutes) as total_mins
         FROM users u
         JOIN sessions s ON s.user_id = u.id
-        WHERE s.date >= %s AND s.duration_minutes > 0
+        WHERE s.date >= %s AND s.duration_minutes >= %s
         GROUP BY u.id, u.name, u.anonymous_mode
         ORDER BY aura_score DESC
         LIMIT 20
-    """, ((today_ist - timedelta(days=7)).isoformat(),))
+    """, ((today_ist - timedelta(days=7)).isoformat(), MIN_REAL_SESSION_MIN))
     board = cur.fetchall()
     cur.close()
     conn.close()

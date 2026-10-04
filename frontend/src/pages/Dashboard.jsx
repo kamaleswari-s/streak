@@ -8,6 +8,8 @@ import Navbar from '../components/layout/Navbar'
 import API from '../config'
 import useWakeLock from '../useWakeLock'
 
+const ANOMALY_COOLDOWN_MS = 120000
+
 const tourSlides = [
   { isLogo: true },
   {
@@ -83,6 +85,7 @@ const CHIME_NOTES = {
   milestone: [659, 784, 988],
   alert: [330, 247],
   end: [523, 392],
+  nudge: [494, 587],
 }
 
 function playChime(kind) {
@@ -109,12 +112,37 @@ function playResumeChime() {
   playChime('resume')
 }
 
+// ── DEVICE HELPERS ────────────────────────────────────────
 function deviceStateKey(d) {
   if (!d) return null
   if (d.session?.startsWith('getting ready')) return 'settling'
   if (d.session === 'standby') return 'standby'
   if (d.phoneAlerted || d.session === 'phone detected') return 'phone'
   return d.led || 'active'
+}
+
+function deviceLine(d) {
+  const key = deviceStateKey(d)
+  const lines = {
+    standby: 'device on standby. sit down whenever you are ready.',
+    yellow: 'session started. building momentum.',
+    blue: 'momentum is growing. stay with it.',
+    green: 'full flow. do not break it now.',
+    phone: 'phone on the desk. your session is paused until it is gone.',
+  }
+  if (key === 'settling') {
+    return `settling in, ${String(d.session).replace('getting ready ', '')} until your session starts.`
+  }
+  return lines[key] || null
+}
+
+function formatClock(secs) {
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  const mm = String(m).padStart(2, '0')
+  const ss = String(s).padStart(2, '0')
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
 // ── SMALL COMPONENTS ──────────────────────────────────────
@@ -129,6 +157,56 @@ function MoonIcon() {
 function LEDIcon({ ledName }) {
   const colors = { white: '#ffffff', yellow: '#EF9F27', blue: '#4A90D9', green: '#639922', red: '#e04545', off: '#555555' }
   return <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: colors[ledName] || '#555', display: 'inline-block' }} />
+}
+
+function DevicePill({ online }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: '8px',
+      padding: '5px 12px', borderRadius: '20px',
+      border: '1.5px solid var(--border)', background: 'var(--surface)',
+      fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)'
+    }}>
+      <motion.span
+        animate={{ opacity: online ? [0.4, 1, 0.4] : 1 }}
+        transition={{ duration: 1.5, repeat: online ? Infinity : 0 }}
+        style={{ width: '8px', height: '8px', borderRadius: '50%', background: online ? '#639922' : '#888' }} />
+      {online ? 'device live' : 'device offline'}
+    </div>
+  )
+}
+
+function AiNudgeCard({ visible, onDismiss }) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          className="glass"
+          style={{
+            position: 'fixed', bottom: '24px', left: '24px', zIndex: 998,
+            maxWidth: '320px', padding: '1.25rem 1.5rem',
+            borderLeft: '4px solid var(--accent)'
+          }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.6, marginBottom: '8px', letterSpacing: '1px' }}>
+            STRËAK NOTICED
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: '8px' }}>
+            your movement drifted from your usual focus pattern. a quick two minute stretch might help.
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.7, marginBottom: '10px' }}>
+            a suggestion from the on-device AI. your session was not paused.
+          </div>
+          <span onClick={onDismiss}
+            style={{ fontSize: '12px', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
+            got it →
+          </span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
 }
 
 function OledStatusPopup({ data }) {
@@ -709,12 +787,15 @@ export default function Dashboard() {
   const [oledData, setOledData] = useState({ session: 'standby', ir: 0, pir: 0, gas: 0, temp: 0, hum: 0, led: 'white', speaker: '-', phoneAlerted: false, aqiAlerted: false })
   const [deviceOnline, setDeviceOnline] = useState(false)
   const [showReadyPopup, setShowReadyPopup] = useState(false)
+  const [showAiNudge, setShowAiNudge] = useState(false)
   const socketRef = useRef(null)
   const timerRef = useRef(null)
   const nudgeShownRef = useRef(false)
   const lastStatusAtRef = useRef(0)
   const prevStateRef = useRef(null)
   const lastMilestoneRef = useRef(0)
+  const lastAnomalyAtRef = useRef(0)
+  const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'strëak')
   const { requestWakeLock, releaseWakeLock } = useWakeLock()
 
   const scheduleReadyPopup = () => {
@@ -771,6 +852,15 @@ export default function Dashboard() {
       setDeviceOnline(true)
       setOledData(statusData)
     })
+    // the device sends this many times a second, so only show it once per cooldown
+    socketRef.current.on(`anomaly_${user?.user_id}`, () => {
+      const now = Date.now()
+      if (now - lastAnomalyAtRef.current < ANOMALY_COOLDOWN_MS) return
+      lastAnomalyAtRef.current = now
+      setShowAiNudge(true)
+      playChime('nudge')
+      setTimeout(() => setShowAiNudge(false), 20000)
+    })
     return () => socketRef.current?.disconnect()
   }, [])
 
@@ -825,6 +915,22 @@ export default function Dashboard() {
       if (elapsed - block * 1800 < 5) playChime('milestone')
     }
   }, [elapsed, sessionActive])
+
+  // live browser tab title
+  useEffect(() => {
+    const base = originalTitleRef.current
+    if (sessionActive) {
+      document.title = `${formatClock(elapsed)} active · strëak`
+    } else if (deviceOnline && oledData.session?.startsWith('getting ready')) {
+      document.title = `${String(oledData.session).replace('getting ready ', '')} to start · strëak`
+    } else {
+      document.title = base
+    }
+  }, [sessionActive, elapsed, deviceOnline, oledData.session])
+
+  useEffect(() => {
+    return () => { document.title = originalTitleRef.current }
+  }, [])
 
   useEffect(() => {
     if (sessionActive && sessionStart) {
@@ -1006,28 +1112,38 @@ export default function Dashboard() {
     </div>
   )
 
+  const liveLine = deviceOnline ? deviceLine(oledData) : null
+  const dailyGoal = data?.user?.daily_goal_minutes || 60
+  const goalPct = Math.min(100, Math.round(((data?.today_minutes || 0) / dailyGoal) * 100))
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
       <LateNightNudge show={showLateNightNudge} onDismiss={dismissLateNightNudge} />
       <ResumeAlarmOverlay pausedUntil={pausedUntil} pauseTotalMs={pauseTotalMs} onDismiss={dismissResumeAlarm} />
+      <AiNudgeCard visible={showAiNudge} onDismiss={() => setShowAiNudge(false)} />
       <OledStatusPopup data={oledData} />
       <ReadyToStartPopup visible={showReadyPopup} onStart={handleReadyStart} />
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px', color: 'var(--primary)', opacity: 0.75, marginBottom: '8px', textTransform: 'uppercase' }}>
-            strëak · Sensor-Triggered Real-time Effort and Activity Kinetics
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px', color: 'var(--primary)', opacity: 0.75, textTransform: 'uppercase' }}>
+              strëak · Sensor-Triggered Real-time Effort and Activity Kinetics
+            </div>
+            <DevicePill online={deviceOnline} />
           </div>
           <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 36px)', color: 'var(--primary)', marginBottom: '6px' }}>
             {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
           </h1>
           <p style={{ fontSize: '16px', color: 'var(--text-primary)', opacity: 0.75 }}>
-            {sessionActive
-              ? 'session in progress. keep going.'
-              : data?.streak > 0
-                ? `you are on a ${data.streak}-day streak. don't break it.`
-                : 'sit down and start your streak today.'}
+            {liveLine
+              ? liveLine
+              : sessionActive
+                ? 'session in progress. keep going.'
+                : data?.streak > 0
+                  ? `you are on a ${data.streak}-day streak. don't break it.`
+                  : 'sit down and start your streak today.'}
           </p>
         </motion.div>
 
@@ -1038,6 +1154,16 @@ export default function Dashboard() {
             <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '2px', marginBottom: '8px', opacity: 0.7 }}>TODAY</div>
             <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '42px', color: 'var(--accent-dark)', lineHeight: 1 }}>{formatMins(data?.today_minutes)}</div>
             <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.65 }}>logged so far</div>
+            <div style={{ height: '6px', borderRadius: '3px', background: 'var(--border)', marginTop: '12px', overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${goalPct}%` }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                style={{ height: '100%', background: 'var(--accent-dark)', borderRadius: '3px' }} />
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-primary)', marginTop: '6px', opacity: 0.55 }}>
+              {goalPct}% of your {formatMins(dailyGoal)} goal
+            </div>
           </motion.div>
 
           <motion.div className="glass" whileHover={{ y: -4 }} style={{ padding: '1.5rem', textAlign: 'center' }}>

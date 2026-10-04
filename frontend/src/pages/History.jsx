@@ -58,6 +58,16 @@ export default function History() {
     return date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
+  // count how often each stand-up reason was used in the sessions on screen
+  const reasonCounts = {}
+  sessions.forEach(s => {
+    const r = (s.stand_up_reason || '').trim()
+    if (!r) return
+    reasonCounts[r] = (reasonCounts[r] || 0) + 1
+  })
+  const reasonList = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])
+  const maxReasonCount = reasonList.length > 0 ? reasonList[0][1] : 1
+
   const SeatIcon = () => (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <rect x="8" y="28" width="32" height="4" rx="2" fill="var(--primary)" opacity="0.3"/>
@@ -100,6 +110,44 @@ export default function History() {
               </button>
             ))}
           </div>
+
+          {!loading && reasonList.length > 0 && (
+            <motion.div className="glass"
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              style={{ padding: '1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)',
+                letterSpacing: '2px', marginBottom: '14px', opacity: 0.7
+              }}>
+                WHY YOU STOOD UP
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {reasonList.map(([reason, count]) => (
+                  <div key={reason} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '190px', fontSize: '13px', fontWeight: '600',
+                      color: 'var(--text-primary)', opacity: 0.85, flexShrink: 0
+                    }}>
+                      {reason}
+                    </div>
+                    <div style={{ flex: 1, height: '8px', borderRadius: '4px', background: 'var(--border)', overflow: 'hidden' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.round((count / maxReasonCount) * 100)}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        style={{ height: '100%', background: 'var(--primary)', borderRadius: '4px' }} />
+                    </div>
+                    <div style={{
+                      width: '24px', textAlign: 'right', fontFamily: 'var(--font-pixel)',
+                      fontSize: '16px', color: 'var(--primary)', fontWeight: '700'
+                    }}>
+                      {count}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {loading ? (
             <div style={{
@@ -149,6 +197,16 @@ export default function History() {
                     }}>
                       {formatTime(s.start_time)} — {formatTime(s.end_time)}
                     </div>
+                    {s.stand_up_reason && (
+                      <div style={{
+                        display: 'inline-block', marginTop: '8px',
+                        padding: '3px 10px', borderRadius: '20px',
+                        border: '1.5px solid var(--border)', background: 'var(--surface-2)',
+                        fontSize: '11px', fontWeight: '600', color: 'var(--text-primary)', opacity: 0.85
+                      }}>
+                        {s.stand_up_reason}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
