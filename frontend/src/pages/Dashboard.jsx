@@ -1016,6 +1016,9 @@ export default function Dashboard() {
       <div style={{ padding: '2rem 2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px', color: 'var(--primary)', opacity: 0.75, marginBottom: '8px', textTransform: 'uppercase' }}>
+            strëak · Sensor-Triggered Real-time Effort and Activity Kinetics
+          </div>
           <h1 style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(24px, 4vw, 36px)', color: 'var(--primary)', marginBottom: '6px' }}>
             {new Date().getHours() < 12 ? 'good morning' : new Date().getHours() < 17 ? 'good afternoon' : 'good evening'}, {user?.name?.split(' ')[0]} ✦
           </h1>
