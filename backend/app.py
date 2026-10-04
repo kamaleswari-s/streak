@@ -63,6 +63,13 @@ def init_db():
             created_at TIMESTAMP DEFAULT NOW()
         )
     """)
+    # personal goals and preferences (added later, safe to run every start)
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS sessions_goal INTEGER DEFAULT 3")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_days_goal INTEGER DEFAULT 5")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS focus_goal_minutes INTEGER DEFAULT 45")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS eye_rest_enabled BOOLEAN DEFAULT TRUE")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS eye_rest_minutes INTEGER DEFAULT 20")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS why_line TEXT DEFAULT ''")
     cur.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             id SERIAL PRIMARY KEY,
@@ -451,6 +458,45 @@ def onboard():
 
     return jsonify({"status": "onboarded"})
 
+# ── ACCOUNT DELETION ──────────────────────────────────────
+# Permanently deletes the account and everything that belongs to it.
+# The password must be sent again as a safety check. Nothing is deleted if
+# anything goes wrong, because all three deletes happen in one transaction.
+@app.route("/account/delete", methods=["POST"])
+@token_required
+def delete_account():
+    data = request.json or {}
+    password = data.get("password", "")
+    if not password:
+        return jsonify({"error": "Enter your password to confirm"}), 400
+
+    conn = get_db()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT password_hash FROM users WHERE id=%s", (request.user_id,))
+        user = cur.fetchone()
+        cur.close()
+
+        if not user or not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
+            conn.close()
+            return jsonify({"error": "That password is not right"}), 401
+
+        cur2 = conn.cursor()
+        cur2.execute("DELETE FROM wellbeing_events WHERE user_id=%s", (request.user_id,))
+        cur2.execute("DELETE FROM sessions WHERE user_id=%s", (request.user_id,))
+        cur2.execute("DELETE FROM users WHERE id=%s", (request.user_id,))
+        conn.commit()
+        cur2.close()
+        conn.close()
+    except Exception as err:
+        conn.rollback()
+        conn.close()
+        print("Account deletion failed:", err)
+        return jsonify({"error": "Something went wrong, nothing was deleted"}), 500
+
+    active_sessions.pop(request.user_id, None)
+    return jsonify({"status": "deleted"})
+
 # ── SESSION ROUTES ────────────────────────────────────────
 @app.route("/session/start", methods=["POST"])
 @token_required
@@ -521,7 +567,12 @@ def dashboard():
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-    cur.execute("SELECT name, theme, daily_goal_minutes, device_name FROM users WHERE id=%s", (user_id,))
+    cur.execute("""
+        SELECT name, theme, daily_goal_minutes, device_name,
+               sessions_goal, active_days_goal, focus_goal_minutes,
+               eye_rest_enabled, eye_rest_minutes, why_line
+        FROM users WHERE id=%s
+    """, (user_id,))
     user = cur.fetchone()
 
     today_ist = datetime.now(IST).date()
@@ -550,6 +601,12 @@ def dashboard():
     today_minutes = round(today_row["total"] or 0, 1)
 
     cur.execute("""
+        SELECT COUNT(*) as n FROM sessions
+        WHERE user_id=%s AND date=%s AND duration_minutes >= %s
+    """, (user_id, today_ist.isoformat(), MIN_REAL_SESSION_MIN))
+    today_sessions = cur.fetchone()["n"]
+
+    cur.execute("""
         SELECT MAX(aura_score) as aura FROM sessions
         WHERE user_id=%s AND duration_minutes >= %s
     """, (user_id, MIN_REAL_SESSION_MIN))
@@ -565,6 +622,7 @@ def dashboard():
         "user": dict(user),
         "streak": streak,
         "today_minutes": today_minutes,
+        "today_sessions": today_sessions,
         "aura_score": aura_score,
         "weekly_data": [dict(r) for r in weekly_data],
         "all_dates": all_dates,
@@ -631,7 +689,7 @@ def analytics():
 
     sleep_pattern = get_sleep_pattern(user_id)
 
-    # new: per-day summaries, breaks and eye rests
+    # per-day summaries, breaks and eye rests
     days, breaks = get_day_and_break_stats(user_id)
     eye = get_eye_rest_counts(user_id)
 
@@ -782,7 +840,12 @@ def leaderboard():
 def get_settings():
     conn = get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT name, email, theme, daily_goal_minutes, device_name, anonymous_mode FROM users WHERE id=%s", (request.user_id,))
+    cur.execute("""
+        SELECT name, email, theme, daily_goal_minutes, device_name, anonymous_mode,
+               sessions_goal, active_days_goal, focus_goal_minutes,
+               eye_rest_enabled, eye_rest_minutes, why_line
+        FROM users WHERE id=%s
+    """, (request.user_id,))
     user = cur.fetchone()
     cur.close()
     conn.close()
@@ -791,19 +854,53 @@ def get_settings():
 @app.route("/settings", methods=["PUT"])
 @token_required
 def update_settings():
-    data = request.json
+    data = request.json or {}
+
+    def clamp(value, low, high):
+        try:
+            return max(low, min(high, int(value)))
+        except (TypeError, ValueError):
+            return None
+
+    # any value that is missing or invalid stays as it is in the database
+    name = (data.get("name") or "").strip() or None
+    anonymous = data.get("anonymous_mode")
+    if not isinstance(anonymous, bool):
+        anonymous = None
+    eye_enabled = data.get("eye_rest_enabled")
+    if not isinstance(eye_enabled, bool):
+        eye_enabled = None
+    why_line = data.get("why_line")
+    why_line = str(why_line).strip()[:140] if why_line is not None else None
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        UPDATE users SET name=%s, theme=%s,
-        daily_goal_minutes=%s, device_name=%s, anonymous_mode=%s
-        WHERE id=%s
+        UPDATE users SET
+            name = COALESCE(%s, name),
+            theme = COALESCE(%s, theme),
+            daily_goal_minutes = COALESCE(%s, daily_goal_minutes),
+            device_name = COALESCE(%s, device_name),
+            anonymous_mode = COALESCE(%s, anonymous_mode),
+            sessions_goal = COALESCE(%s, sessions_goal),
+            active_days_goal = COALESCE(%s, active_days_goal),
+            focus_goal_minutes = COALESCE(%s, focus_goal_minutes),
+            eye_rest_enabled = COALESCE(%s, eye_rest_enabled),
+            eye_rest_minutes = COALESCE(%s, eye_rest_minutes),
+            why_line = COALESCE(%s, why_line)
+        WHERE id = %s
     """, (
-        data.get("name"),
+        name,
         data.get("theme"),
-        data.get("daily_goal_minutes"),
+        clamp(data.get("daily_goal_minutes"), 10, 480),
         data.get("device_name"),
-        data.get("anonymous_mode"),
+        anonymous,
+        clamp(data.get("sessions_goal"), 1, 12),
+        clamp(data.get("active_days_goal"), 1, 7),
+        clamp(data.get("focus_goal_minutes"), 10, 240),
+        eye_enabled,
+        clamp(data.get("eye_rest_minutes"), 10, 60),
+        why_line,
         request.user_id
     ))
     conn.commit()
