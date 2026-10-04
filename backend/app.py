@@ -379,6 +379,31 @@ def end_session():
     result = do_end_session(request.user_id, reason)
     return jsonify(result), (400 if "error" in result else 200)
 
+# saves the stand-up reason onto the most recently ended session
+# (used when the sensor ended the session before the reason was picked)
+@app.route("/session/reason", methods=["POST"])
+@token_required
+def save_session_reason():
+    data = request.json or {}
+    reason = (data.get("reason") or "").strip()
+    if not reason:
+        return jsonify({"error": "No reason provided"}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE sessions SET stand_up_reason=%s
+        WHERE id = (
+            SELECT id FROM sessions
+            WHERE user_id=%s AND end_time IS NOT NULL
+            ORDER BY end_time DESC LIMIT 1
+        )
+    """, (reason, request.user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status": "saved"})
+
 # ── DASHBOARD ─────────────────────────────────────────────
 @app.route("/dashboard", methods=["GET"])
 @token_required

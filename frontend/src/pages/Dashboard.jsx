@@ -928,6 +928,21 @@ export default function Dashboard() {
     } catch (err) { console.error(err) }
   }
 
+  // used when the sensor already ended the session before a reason was picked
+  const saveReasonOnly = async (reason) => {
+    try {
+      await axios.post(`${API}/session/reason`, { reason }, { headers: { Authorization: `Bearer ${token}` } })
+    } catch (err) { console.error(err) }
+  }
+
+  const submitReason = (reason) => {
+    if (sessionActive) {
+      endSession(reason)
+    } else if (reason && reason !== 'Not specified') {
+      saveReasonOnly(reason)
+    }
+  }
+
   const getFinalReason = () => {
     if (selectedReason === 'Other') return customReason.trim() || 'Other'
     return selectedReason || 'Not specified'
@@ -940,15 +955,13 @@ export default function Dashboard() {
 
   const handleJustStop = () => {
     const reason = getFinalReason()
-    console.log('STRËAK stand-up reason:', reason)
     setShowStandUpOptions(false)
     resetReason()
-    endSession(reason)
+    submitReason(reason)
   }
 
   const handleStartResumeTimer = () => {
     const reason = getFinalReason()
-    console.log('STRËAK stand-up reason:', reason)
     let targetMs
     if (resumeMode === 'time') {
       const [h, m] = resumeTimeInput.split(':').map(Number)
@@ -966,7 +979,7 @@ export default function Dashboard() {
     resetReason()
     setPauseTotalMs(targetMs - Date.now())
     setPausedUntil(targetMs)
-    endSession(reason)
+    submitReason(reason)
   }
 
   const handleReadyStart = () => {
