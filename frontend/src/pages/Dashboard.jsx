@@ -275,13 +275,13 @@ function EyeRestCard({ phase, secondsLeft, onStart, onSkip }) {
 
               {phase === 'counting' && (
                 <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                  keep looking far away. let your eyes relax.
+                  keep looking far away. let your eyes relax. your timer is paused.
                 </div>
               )}
 
               {phase === 'done' && (
                 <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                  nice. your eyes thank you. back to it.
+                  nice. your eyes thank you. timer is running again.
                 </div>
               )}
             </div>
@@ -883,8 +883,25 @@ export default function Dashboard() {
   const lastEyeBlockRef = useRef(0)
   const eyePreviewRef = useRef(false)
   const selfEndedAtRef = useRef(0)
+  const pausedTotalMsRef = useRef(0)
+  const pauseStartedAtRef = useRef(0)
   const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'strëak')
   const { requestWakeLock, releaseWakeLock } = useWakeLock()
+
+  // the session clock stops while the 20 second eye rest is counting down
+  const beginTimerPause = () => {
+    if (!pauseStartedAtRef.current) pauseStartedAtRef.current = Date.now()
+  }
+  const endTimerPause = () => {
+    if (pauseStartedAtRef.current) {
+      pausedTotalMsRef.current += Date.now() - pauseStartedAtRef.current
+      pauseStartedAtRef.current = 0
+    }
+  }
+  const resetTimerPause = () => {
+    pausedTotalMsRef.current = 0
+    pauseStartedAtRef.current = 0
+  }
 
   const scheduleReadyPopup = () => {
     setTimeout(() => {
@@ -909,15 +926,18 @@ export default function Dashboard() {
 
   const startEyeRest = () => {
     setEyeLeft(EYE_REST_LOOK_SEC)
+    beginTimerPause()
     setEyePhase('counting')
   }
 
   const skipEyeRest = () => {
+    endTimerPause()
     setEyePhase(null)
     if (!eyePreviewRef.current) logEvent('eye_rest_skipped')
   }
 
   const finishEyeRest = () => {
+    endTimerPause()
     setEyePhase('done')
     playChime('up')
     if (!eyePreviewRef.current) logEvent('eye_rest_done')
@@ -1049,9 +1069,12 @@ export default function Dashboard() {
     }
   }, [elapsed, sessionActive])
 
-  // close the eye rest card when the session ends
+  // close the eye rest card and clear any timer pause when the session ends
   useEffect(() => {
-    if (!sessionActive) setEyePhase(null)
+    if (!sessionActive) {
+      setEyePhase(null)
+      resetTimerPause()
+    }
   }, [sessionActive])
 
   // eye rest phases: ask (auto-skips after a minute), counting down, done
@@ -1094,9 +1117,16 @@ export default function Dashboard() {
     return () => { document.title = originalTitleRef.current }
   }, [])
 
+  // session clock: counts real time minus any time spent paused for an eye rest
   useEffect(() => {
     if (sessionActive && sessionStart) {
-      timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - sessionStart) / 1000)), 1000)
+      const tick = () => {
+        const now = Date.now()
+        const currentPause = pauseStartedAtRef.current ? now - pauseStartedAtRef.current : 0
+        const activeMs = now - sessionStart.getTime() - pausedTotalMsRef.current - currentPause
+        setElapsed(Math.max(0, Math.floor(activeMs / 1000)))
+      }
+      timerRef.current = setInterval(tick, 1000)
     } else clearInterval(timerRef.current)
     return () => clearInterval(timerRef.current)
   }, [sessionActive, sessionStart])
@@ -1174,6 +1204,7 @@ export default function Dashboard() {
   const startSession = async () => {
     if (sessionActive) return
     const now = new Date()
+    resetTimerPause()
     setSessionActive(true)
     setSessionStart(now)
     setElapsed(0)
@@ -1351,11 +1382,13 @@ export default function Dashboard() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '1rem' }}>
                 <motion.div
-                  animate={{ opacity: sessionActive ? [0.5, 1, 0.5] : 1 }}
+                  animate={{ opacity: sessionActive && eyePhase !== 'counting' ? [0.5, 1, 0.5] : 1 }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                   style={{ width: '10px', height: '10px', borderRadius: '50%', background: sessionActive ? '#639922' : 'var(--border)' }} />
                 <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '600', opacity: 0.85 }}>
-                  {sessionActive ? 'session active' : 'no active session'}
+                  {sessionActive
+                    ? (eyePhase === 'counting' ? 'timer paused for eye rest' : 'session active')
+                    : 'no active session'}
                 </span>
               </div>
               <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '48px', color: 'var(--primary)', letterSpacing: '2px', marginBottom: '1.5rem', lineHeight: 1 }}>
@@ -1469,10 +1502,6 @@ export default function Dashboard() {
                   back at {new Date(pausedUntil).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}
                 </div>
               )}
-
-              <div style={{ fontSize: '12px', color: 'var(--text-primary)', opacity: 0.4, marginTop: '1rem' }}>
-                hardware connects automatically when ESP32 is ready
-              </div>
             </div>
           </motion.div>
 
